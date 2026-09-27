@@ -1,0 +1,29 @@
+{
+  "name": "doagol",
+  "version": "0.1.0",
+  "description": "DoaGol - Sistema de Gestão de Doações para Escolinhas de Futebol Social",
+  "main": "src/domain/Necessidade.js",
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "author": "André Ihsan Ward, Rodrigo Lucas Mascarenhas Leite Oliveira, Cristian de Souza",
+  "license": "MIT",
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 85,
+        "functions": 100,
+        "lines": 95,
+        "statements": 95
+      }
+    }
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
