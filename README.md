@@ -1,6 +1,6 @@
 # DoaGol
 
-![CI](https://github.com/AndreWard1/doagol/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/Grupo-carro-chefe/Grupo-ARC/actions/workflows/ci.yml/badge.svg)
 
 Sistema de Gestão de Doações para Escolinhas de Futebol Social. Trabalho da disciplina de
 Laboratório de Engenharia de Software, Universidade Presbiteriana Mackenzie.
