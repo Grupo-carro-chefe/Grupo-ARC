@@ -1,6 +1,6 @@
 # DoaGol
 
-![CI](https://github.com/SEU_USUARIO/doagol/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/AndreWard1/doagol/actions/workflows/ci.yml/badge.svg)
 
 Sistema de Gestão de Doações para Escolinhas de Futebol Social. Trabalho da disciplina de
 Laboratório de Engenharia de Software, Universidade Presbiteriana Mackenzie.
@@ -12,6 +12,10 @@ Laboratório de Engenharia de Software, Universidade Presbiteriana Mackenzie.
 | Cristian de Souza | 10436050 |
 
 ## Entrega 2: classe implementada e testes
+
+Para a camada de aplicação, adotamos **Node.js**, mantendo JavaScript de ponta a ponta com o
+front-end em React definido na arquitetura (Capítulo 6). Os testes unitários usam **Jest**, e a
+integração contínua roda no **GitHub Actions**.
 
 A classe implementada é **`Necessidade`** (diagrama de classes, Figura 5.2), que representa a
 necessidade concreta de uma criança (ex.: "Chuteira de futsal nº 33") e concentra as regras dos
