@@ -57,14 +57,34 @@ npm test               # roda os testes
 npm run test:coverage  # roda os testes com relatório de cobertura
 ```
 
-## Esteira de integração contínua
+## Esteira de CI/CD
 
 O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda no GitHub Actions a cada
-`push` ou pull request na branch `main`, e também pode ser disparado manualmente na aba
-**Actions**. Etapas:
+`push` ou pull request nas branches `main` e `dev`, e também pode ser disparado manualmente na aba
+**Actions**.
+
+```
+push/PR ──> Build e testes (Node 20 e 22) ──┬──> Entrega: pacote versionado (Release)
+                                             └──> Implantação: relatório no GitHub Pages
+                                             (estas duas só na main)
+```
+
+### Integração contínua (todas as branches)
 
 1. Baixa o código do repositório.
 2. Configura o Node.js (matriz com as versões 20 e 22).
 3. Instala as dependências com `npm ci`.
-4. Executa os testes com cobertura mínima exigida (95% de linhas, 85% de branches). Se algum teste falhar ou a cobertura cair, a esteira fica vermelha.
+4. Executa os testes com cobertura mínima exigida (95% de linhas, 85% de branches). Se algum teste falhar ou a cobertura cair, a esteira fica vermelha e nada é entregue.
 5. Publica o relatório de cobertura como artefato da execução.
+
+### Entrega e implantação contínuas (só na `main`, depois dos testes passarem)
+
+- **Entrega:** gera o pacote `doagol-<versão>.tgz` com `npm pack` e publica em
+  [Releases](https://github.com/Grupo-carro-chefe/Grupo-ARC/releases), com uma versão nova a cada execução.
+- **Implantação:** publica o relatório de cobertura em
+  [grupo-carro-chefe.github.io/Grupo-ARC](https://grupo-carro-chefe.github.io/Grupo-ARC/).
+
+### Fluxo de branches
+
+O trabalho é feito na `dev` (via pull request) e chega à `main` por um pull request de `dev` para `main`.
+As duas branches exigem pull request com aprovação, e a `main` só aceita o merge com os testes passando.
