@@ -88,7 +88,7 @@ class Necessidade {
 
   /** Percentual arrecadado da meta, inteiro de 0 a 100 (barra de progresso do perfil). */
   percentualArrecadado() {
-    return Math.floor((this._arrecadadoCentavos * 100) / this._estimadoCentavos);
+    return Math.ceil((this._arrecadadoCentavos * 100) / this._estimadoCentavos);
   }
 
   /**
