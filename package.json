@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "DoaGol - Sistema de Gestão de Doações para Escolinhas de Futebol Social",
   "main": "src/domain/Necessidade.js",
+  "files": [
+    "src"
+  ],
   "scripts": {
     "test": "jest",
     "test:coverage": "jest --coverage"
