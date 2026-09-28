@@ -1,4 +1,4 @@
-name: CI - DoaGol
+name: CI/CD - DoaGol
 
 on:
   push:
@@ -37,3 +37,71 @@ jobs:
         with:
           name: relatorio-cobertura
           path: coverage/
+
+  # Entrega contínua: só roda na main e só depois de os testes passarem nas duas versões do Node.
+  entrega:
+    name: Entrega - pacote versionado
+    needs: testes
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Gerar o pacote (npm pack)
+        id: pacote
+        run: |
+          echo "arquivo=$(npm pack)" >> "$GITHUB_OUTPUT"
+          echo "versao=v$(node -p "require('./package.json').version")-build.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar a Release no GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.pacote.outputs.versao }}" "${{ steps.pacote.outputs.arquivo }}" \
+            --target "${{ github.sha }}" \
+            --title "DoaGol ${{ steps.pacote.outputs.versao }}" \
+            --notes "Pacote gerado automaticamente pela esteira após os testes passarem (commit ${{ github.sha }}). Relatório de cobertura: https://grupo-carro-chefe.github.io/Grupo-ARC/"
+
+  # Implantação contínua: publica o relatório de cobertura no GitHub Pages.
+  implantacao:
+    name: Implantação - GitHub Pages
+    needs: testes
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Baixar o relatório de cobertura
+        uses: actions/download-artifact@v8
+        with:
+          name: relatorio-cobertura
+          path: coverage/
+
+      - name: Configurar o GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Preparar o site
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: coverage/lcov-report/
+
+      - name: Publicar no GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v5
