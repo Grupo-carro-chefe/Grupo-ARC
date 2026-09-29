@@ -64,9 +64,11 @@ O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda no GitHub
 **Actions**.
 
 ```
-push/PR ──> Build e testes (Node 20 e 22) ──┬──> Entrega: pacote versionado (Release)
-                                             └──> Implantação: relatório no GitHub Pages
-                                             (estas duas só na main)
+push/PR ──> GitHub Actions: Build e testes (Node 20 e 22) ──┬──> Entrega: pacote versionado (Release)
+   │                                                        └──> Implantação: relatório no GitHub Pages
+   │                                                        (estas duas só na main)
+   │
+   └──> webhook (push na main) ──> Jenkins na AWS EC2: npm ci + testes com cobertura
 ```
 
 ### Integração contínua (todas as branches)
@@ -88,3 +90,33 @@ push/PR ──> Build e testes (Node 20 e 22) ──┬──> Entrega: pacote v
 
 O trabalho é feito na `dev` (via pull request) e chega à `main` por um pull request de `dev` para `main`.
 As duas branches exigem pull request com aprovação, e a `main` só aceita o merge com os testes passando.
+
+## Jenkins na AWS
+
+Além do GitHub Actions, o projeto também roda num Jenkins instalado numa instância EC2 do
+AWS Academy Learner Lab, seguindo o laboratório da Aula 7 (com Node.js no lugar do Maven).
+A cada push na `main`, o GitHub avisa o Jenkins por webhook, e o Jenkins baixa o código e roda
+`npm ci` e `npm run test:coverage`. O relatório de cobertura fica arquivado em cada build.
+
+A configuração está versionada em [`infra/`](infra/), sem nenhuma senha ou chave:
+
+| Arquivo | Conteúdo |
+|---|---|
+| [`infra/aws/criar-jenkins-ec2.sh`](infra/aws/criar-jenkins-ec2.sh) | Cria a EC2 (Ubuntu 24.04, t3.small, chave `vockey`) e o Security Group com as portas 8080 e 22 |
+| [`infra/aws/jenkins-user-data.sh`](infra/aws/jenkins-user-data.sh) | User Data da instância: instala Java 21, Git, Node.js 22 e Jenkins LTS |
+| [`infra/jenkins/doagol-job.xml`](infra/jenkins/doagol-job.xml) | Job `DoaGol`: Git na `main`, gatilhos por webhook e Poll SCM, testes com cobertura, arquivamento de `coverage/` |
+| [`infra/jenkins/importar-job.sh`](infra/jenkins/importar-job.sh) | Cria o job num Jenkins pela API REST, pedindo usuário e senha na hora |
+
+### Como recriar
+
+1. No AWS Academy, abra o Learner Lab, clique em **Start Lab** e espere a bolinha ficar verde.
+2. No terminal do lab, rode `git clone https://github.com/Grupo-carro-chefe/Grupo-ARC.git` e depois
+   `bash Grupo-ARC/infra/aws/criar-jenkins-ec2.sh`. O script mostra o IP público.
+3. Depois de 3 a 5 minutos, abra `http://<IP>:8080`, use a senha inicial (o script mostra o comando que a exibe),
+   instale os plugins sugeridos e crie o usuário administrador.
+4. No WSL ou no Linux, rode `bash infra/jenkins/importar-job.sh http://<IP>:8080`.
+5. No GitHub, em **Settings > Webhooks**, adicione `http://<IP>:8080/github-webhook/`
+   (content type `application/json`, só o evento push).
+
+O IP público muda sempre que a instância é parada ou o lab reinicia. Nesse caso, atualize o webhook com o IP novo.
+Pare a instância quando não estiver em uso, para não consumir o crédito do lab.
