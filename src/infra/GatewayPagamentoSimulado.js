@@ -15,6 +15,11 @@ class GatewayPagamentoSimulado {
   async processar() {
     return this.aprovar ? { aprovado: true, transacaoId: `SIM-${randomUUID()}` } : { aprovado: false };
   }
+
+  /** Desfaz uma cobrança aprovada. @returns {Promise<{estornado: boolean, transacaoId: string}>} */
+  async estornar(transacaoId) {
+    return { estornado: true, transacaoId };
+  }
 }
 
 module.exports = { GatewayPagamentoSimulado };

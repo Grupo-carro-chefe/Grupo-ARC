@@ -119,6 +119,12 @@ function criarApp({ gateway = new GatewayPagamentoSimulado(), notificador = new 
     if (err.type === 'entity.parse.failed') {
       return res.status(400).json({ erro: 'JSON inválido.' });
     }
+    // Outros erros de requisição do Express (corpo grande demais, charset inválido...) já trazem
+    // o status 4xx; sem isto, viravam 500 e eram registrados como falha interna.
+    const status = err.status ?? err.statusCode;
+    if (Number.isInteger(status) && status >= 400 && status < 500) {
+      return res.status(status).json({ erro: status === 413 ? 'Corpo da requisição grande demais.' : 'Requisição inválida.' });
+    }
     // Regras de negócio do domínio lançam Error simples; TypeError e afins são falhas internas.
     if (err.constructor === Error) {
       return res.status(400).json({ erro: err.message });

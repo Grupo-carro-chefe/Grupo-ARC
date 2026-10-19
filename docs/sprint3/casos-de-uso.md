@@ -52,9 +52,9 @@ para chamadas aos serviços e ao domínio e converte erros em códigos de status
 | Passo da especificação | Onde está no código |
 |---|---|
 | O doador escolhe a necessidade, o valor, a forma de pagamento e se quer ser anônimo | `POST /necessidades/:id/doacoes` com `doadorId`, `valor`, `formaPagamento` (`PIX`, `CARTAO_CREDITO`, `BOLETO`) e `anonima` |
-| O sistema valida a doação antes de cobrar | `DoacaoService.realizar()`, passo 1: monta uma `Doacao` só para validar, exige necessidade `ABERTA` e valor até o restante da meta (comparado em centavos). Nenhum dado inválido chega ao gateway |
-| O sistema envia a cobrança ao gateway de pagamento (RF07) | passo 2: `gateway.processar({ valor, formaPagamento })` |
-| O pagamento é confirmado; o sistema registra a doação e atualiza o valor arrecadado (RF08) | passo 3: `Doacao` imutável com `transacaoId` (RNF05), `necessidade.registrarDoacao()` e `doacoes.salvar()` |
+| O sistema valida a doação antes de cobrar | `DoacaoService.realizar()`, passo 1: monta uma `Doacao` só para validar (valor de pelo menos R$ 0,01, já arredondado em centavos), exige necessidade `ABERTA` e valor até o restante da meta (comparado em centavos). Nenhum dado inválido chega ao gateway |
+| O sistema envia a cobrança ao gateway de pagamento (RF07) | passo 2: `gateway.processar({ valor, formaPagamento })` com o valor arredondado, o mesmo que fica registrado |
+| O pagamento é confirmado; o sistema registra a doação e atualiza o valor arrecadado (RF08) | passo 3: `Doacao` imutável com `transacaoId` (RNF05), `necessidade.registrarDoacao()` e `doacoes.salvar()`. Se o registro falhar, a cobrança é desfeita com `gateway.estornar(transacaoId)` antes de devolver o erro |
 | O sistema notifica a escolinha (RF09) | passo 4: `notificador.notificarDoacaoRecebida()`; uma falha na notificação é registrada no log e não desfaz a doação já cobrada |
 | O sistema emite o comprovante (UC-09) | passo 5: `doacao.gerarComprovante()`, com código `DOA-XXXXXXXX`; a API responde **201** |
 | **A1. Pagamento recusado:** o sistema informa e nada é registrado | `PagamentoRecusadoError` → **402**; nada é gravado, notificado nem somado à necessidade |

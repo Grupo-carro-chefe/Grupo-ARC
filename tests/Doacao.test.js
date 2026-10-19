@@ -51,6 +51,7 @@ describe('Doacao', () => {
       ['valor NaN', { valor: NaN }, /maior que zero/],
       ['valor infinito', { valor: Infinity }, /maior que zero/],
       ['mais de 2 casas decimais', { valor: 10.555 }, /duas casas decimais/],
+      ['valor abaixo de 1 centavo', { valor: 5e-9 }, /pelo menos R\$ 0,01/],
       ['forma de pagamento inexistente', { formaPagamento: 'BITCOIN' }, /Forma de pagamento inválida: BITCOIN/],
       ['forma de pagamento ausente', { formaPagamento: undefined }, /Forma de pagamento inválida/],
       ['anônima em texto', { anonima: 'sim' }, /verdadeiro ou falso/],

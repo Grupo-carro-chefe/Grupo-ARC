@@ -42,6 +42,10 @@ class Doacao {
     if (Math.abs(valor * 100 - emCentavos(valor)) > 1e-6) {
       throw new Error('Valor da doação deve ter no máximo duas casas decimais.');
     }
+    // A tolerância acima aceita valores como 5e-9, que arredondam para 0 centavos.
+    if (emCentavos(valor) < 1) {
+      throw new Error('Valor da doação deve ser de pelo menos R$ 0,01.');
+    }
     if (!Object.values(FormaPagamento).includes(formaPagamento)) {
       throw new Error(`Forma de pagamento inválida: ${formaPagamento}.`);
     }

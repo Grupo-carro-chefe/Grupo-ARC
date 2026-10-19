@@ -98,6 +98,24 @@ describe('API REST', () => {
       expect(res.body).toEqual({ erro: 'JSON inválido.' });
     });
 
+    test('POST /escolinhas com corpo acima do limite responde 413, não 500', async () => {
+      const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const res = await request(app).post('/escolinhas').set('Content-Type', 'application/json')
+        .send(JSON.stringify({ nome: 'x'.repeat(200 * 1024) }));
+
+      expect(res.status).toBe(413);
+      expect(res.body).toEqual({ erro: 'Corpo da requisição grande demais.' });
+      expect(log).not.toHaveBeenCalled();
+      log.mockRestore();
+    });
+
+    test('POST /escolinhas com charset não suportado responde 415, não 500', async () => {
+      const res = await request(app).post('/escolinhas').set('Content-Type', 'application/json; charset=koi8-xx').send('{"nome":"x"}');
+
+      expect(res.status).toBe(415);
+      expect(res.body).toEqual({ erro: 'Requisição inválida.' });
+    });
+
     test('POST /escolinhas/:id/aprovar aprova (200)', async () => {
       const { id } = (await request(app).post('/escolinhas').send({ nome: 'X', cidade: 'Recife', uf: 'PE' })).body;
       const res = await request(app).post(`/escolinhas/${id}/aprovar`);

@@ -47,25 +47,34 @@ class DoacaoService {
   async _realizar({ necessidade, escolinhaId, doadorId, valor, formaPagamento, anonima = false }) {
     const dados = { necessidadeId: necessidade.id, doadorId, valor, formaPagamento, anonima };
 
-    // 1. Nenhuma cobrança acontece com dados inválidos.
-    new Doacao(dados);
+    // 1. Nenhuma cobrança acontece com dados inválidos. Daqui em diante vale o valor já
+    // arredondado em centavos, para que o valor cobrado seja o mesmo valor registrado.
+    const { valor: valorValidado } = new Doacao(dados);
     if (!necessidade.estaAberta()) {
       throw new Error(`Não é possível doar para uma necessidade com status ${necessidade.status}.`);
     }
-    if (emCentavos(valor) > emCentavos(necessidade.valorRestante())) {
+    if (emCentavos(valorValidado) > emCentavos(necessidade.valorRestante())) {
       throw new Error(`Valor da doação excede o restante da meta (R$ ${necessidade.valorRestante().toFixed(2)}).`);
     }
 
     // 2. Cobrança. Recusada: nada é gravado nem notificado (A1).
-    const pagamento = await this.gateway.processar({ valor, formaPagamento });
+    const pagamento = await this.gateway.processar({ valor: valorValidado, formaPagamento });
     if (!pagamento.aprovado) {
       throw new PagamentoRecusadoError();
     }
 
-    // 3. Registro da doação confirmada.
-    const doacao = new Doacao({ ...dados, transacaoId: pagamento.transacaoId });
-    necessidade.registrarDoacao(doacao.valor);
-    this.doacoes.salvar(doacao);
+    // 3. Registro da doação confirmada. Se o registro falhar, a cobrança é estornada antes de
+    // devolver o erro, para o doador nunca pagar por uma doação que não ficou registrada.
+    // ponytail: com PostgreSQL, registrar e salvar devem ficar na mesma transação.
+    let doacao;
+    try {
+      doacao = new Doacao({ ...dados, valor: valorValidado, transacaoId: pagamento.transacaoId });
+      necessidade.registrarDoacao(doacao.valor);
+      this.doacoes.salvar(doacao);
+    } catch (erro) {
+      await this._estornar(pagamento.transacaoId);
+      throw erro;
+    }
 
     // 4. Notificação à escolinha; doação anônima não revela o doador (A2).
     // Uma falha aqui não desfaz a doação já cobrada e registrada: só é registrada no log.
@@ -82,6 +91,15 @@ class DoacaoService {
 
     // 5. Comprovante para o doador (UC-09).
     return doacao.gerarComprovante();
+  }
+
+  /** Desfaz a cobrança de uma doação que não pôde ser registrada. Uma falha aqui vai para o log. */
+  async _estornar(transacaoId) {
+    try {
+      await this.gateway.estornar(transacaoId);
+    } catch (erro) {
+      console.error('Falha ao estornar a cobrança', transacaoId, erro);
+    }
   }
 }
 

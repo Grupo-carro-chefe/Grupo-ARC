@@ -9,7 +9,10 @@ const { novaNecessidade } = require('./helpers');
 
 function montar({ aprovar = true } = {}) {
   const gatewaySimulado = new GatewayPagamentoSimulado({ aprovar });
-  const gateway = { processar: jest.fn((pedido) => gatewaySimulado.processar(pedido)) };
+  const gateway = {
+    processar: jest.fn((pedido) => gatewaySimulado.processar(pedido)),
+    estornar: jest.fn((transacaoId) => gatewaySimulado.estornar(transacaoId)),
+  };
   const notificador = new NotificadorEmMemoria();
   const doacoes = new RepositorioEmMemoria();
   const service = new DoacaoService({ gateway, notificador, doacoes });
@@ -115,6 +118,38 @@ describe('DoacaoService (UC-08)', () => {
       await expect(service.realizar(pedido({ valor: -1 }))).rejects.toThrow(/maior que zero/);
       await expect(service.realizar(pedido())).resolves.toHaveProperty('valor', 60);
     });
+
+    test('caso 8: se o registro falhar depois da cobrança, o pagamento é estornado', async () => {
+      const { service, gateway, pedido } = montar();
+      service.doacoes = { salvar: () => { throw new Error('Banco fora do ar'); } };
+
+      await expect(service.realizar(pedido())).rejects.toThrow('Banco fora do ar');
+
+      const { transacaoId } = await gateway.processar.mock.results[0].value;
+      expect(gateway.estornar).toHaveBeenCalledWith(transacaoId);
+    });
+
+    test('caso 9: falha no estorno vai para o log e o erro original é devolvido', async () => {
+      const { service, gateway, pedido } = montar();
+      service.doacoes = { salvar: () => { throw new Error('Banco fora do ar'); } };
+      gateway.estornar.mockRejectedValue(new Error('Gateway fora do ar'));
+      const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      await expect(service.realizar(pedido())).rejects.toThrow('Banco fora do ar');
+
+      expect(log).toHaveBeenCalledWith('Falha ao estornar a cobrança', expect.stringMatching(/^SIM-/), expect.any(Error));
+      log.mockRestore();
+    });
+
+    test('caso 10: cobra o mesmo valor arredondado que registra (0.1 + 0.2 vira 0.3)', async () => {
+      const { service, gateway, necessidade, pedido } = montar();
+
+      const comprovante = await service.realizar(pedido({ valor: 0.1 + 0.2 }));
+
+      expect(gateway.processar).toHaveBeenCalledWith({ valor: 0.3, formaPagamento: 'PIX' });
+      expect(comprovante.valor).toBe(0.3);
+      expect(necessidade.valorArrecadado).toBe(0.3);
+    });
   });
 
   // ---------------------------------------------------------------------
@@ -153,6 +188,7 @@ describe('DoacaoService (UC-08)', () => {
       ['valor zero', { valor: 0 }, /maior que zero/],
       ['valor em texto', { valor: '60' }, /maior que zero/],
       ['valor com 3 casas', { valor: 10.555 }, /duas casas decimais/],
+      ['valor abaixo de 1 centavo', { valor: 5e-9 }, /pelo menos R\$ 0,01/],
       ['forma de pagamento inválida', { formaPagamento: 'CHEQUE' }, /Forma de pagamento inválida/],
       ['doador ausente', { doadorId: undefined }, /Doador é obrigatório/],
       ['anônima em texto', { anonima: 'true' }, /verdadeiro ou falso/],
