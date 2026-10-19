@@ -1,0 +1,113 @@
+# Demonstração da API do DoaGol (Sprint 3)
+#
+# Como usar:
+#   1. Instale a extensão "REST Client" (humao.rest-client) no VS Code.
+#   2. Suba a API com `npm start` (http://localhost:3000).
+#   3. Clique em "Send Request" acima de cada bloco, na ordem.
+# Os dados ficam em memória: reiniciar a API apaga tudo e o roteiro recomeça do passo 1.
+
+@base = http://localhost:3000
+
+### 1. API no ar
+GET {{base}}/saude
+
+### 2. UC-02 Cadastrar escolinha (nasce PENDENTE)
+# @name escolinha
+POST {{base}}/escolinhas
+Content-Type: application/json
+
+{
+  "nome": "Escolinha Bola Pra Frente",
+  "cidade": "São Paulo",
+  "uf": "SP"
+}
+
+### 3. UC-11 Aprovar a escolinha (status APROVADA)
+POST {{base}}/escolinhas/{{escolinha.response.body.$.id}}/aprovar
+
+### 4. UC-03 Cadastrar criança (a resposta não traz nome civil, nascimento nem endereço)
+# @name crianca
+POST {{base}}/escolinhas/{{escolinha.response.body.$.id}}/criancas
+Content-Type: application/json
+
+{
+  "nomeCivil": "Maria Aparecida da Silva",
+  "dataNascimento": "2016-05-10",
+  "apelido": "Mari",
+  "endereco": {
+    "logradouro": "Rua das Acácias",
+    "numero": "120",
+    "bairro": "Jardim Ângela",
+    "cidade": "São Paulo",
+    "uf": "SP",
+    "cep": "04930-000"
+  }
+}
+
+### 5. UC-04 Cadastrar necessidade (chuteira de R$ 150)
+# @name necessidade
+POST {{base}}/criancas/{{crianca.response.body.$.id}}/necessidades
+Content-Type: application/json
+
+{
+  "tipo": "MATERIAL_ESPORTIVO",
+  "descricao": "Chuteira de futsal nº 33",
+  "valorEstimado": 150
+}
+
+### 6. UC-06 Buscar crianças (sem acento e em minúsculas também encontra "São Paulo")
+GET {{base}}/criancas?cidade=sao%20paulo&uf=sp&tipo=MATERIAL_ESPORTIVO
+
+### 7. UC-07 Perfil público da criança (percentual 0)
+GET {{base}}/criancas/{{crianca.response.body.$.id}}
+
+### 8. UC-08 e UC-09 Doar R$ 120 por PIX (devolve o comprovante DOA-XXXXXXXX)
+POST {{base}}/necessidades/{{necessidade.response.body.$.necessidades[0].id}}/doacoes
+Content-Type: application/json
+
+{
+  "doadorId": "doador-joao",
+  "valor": 120,
+  "formaPagamento": "PIX",
+  "anonima": false
+}
+
+### 9. Perfil depois da doação (arrecadado 120, percentual 80)
+GET {{base}}/criancas/{{crianca.response.body.$.id}}
+
+### 10. Erro esperado: doação acima do restante da meta (400)
+POST {{base}}/necessidades/{{necessidade.response.body.$.necessidades[0].id}}/doacoes
+Content-Type: application/json
+
+{
+  "doadorId": "doador-ana",
+  "valor": 100,
+  "formaPagamento": "PIX"
+}
+
+### 11. Doação anônima completando a meta (R$ 30 no cartão)
+POST {{base}}/necessidades/{{necessidade.response.body.$.necessidades[0].id}}/doacoes
+Content-Type: application/json
+
+{
+  "doadorId": "doador-ana",
+  "valor": 30,
+  "formaPagamento": "CARTAO_CREDITO",
+  "anonima": true
+}
+
+### 12. Busca de novo: a necessidade foi atendida e a criança sai da lista
+GET {{base}}/criancas?cidade=sao%20paulo
+
+### 13. Erro esperado: criança inexistente (404)
+GET {{base}}/criancas/00000000-0000-0000-0000-000000000000
+
+### 14. Erro esperado: dados inválidos (400)
+POST {{base}}/escolinhas
+Content-Type: application/json
+
+{
+  "nome": "",
+  "cidade": "São Paulo",
+  "uf": "ZZ"
+}
