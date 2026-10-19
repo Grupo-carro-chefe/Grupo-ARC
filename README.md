@@ -57,6 +57,60 @@ npm test               # roda os testes
 npm run test:coverage  # roda os testes com relatório de cobertura
 ```
 
+## Entrega 3: início da implementação (Sprint 3)
+
+Nesta sprint o projeto passou a ter um back-end em camadas, com uma API REST em **Express 5**
+que implementa os casos de uso **UC-03 Cadastrar Criança**, **UC-06 Buscar Crianças/Necessidades**
+e **UC-08 Realizar Doação** (com o comprovante do UC-09), além do cadastro e da aprovação de
+escolinhas (UC-02 e UC-11) como apoio.
+
+### Estrutura de pastas
+
+```
+src/
+├── api/        app.js: rotas Express e tradução de erros em códigos HTTP
+├── services/   BuscaService (UC-06) e DoacaoService (UC-08)
+├── domain/     Necessidade, Escolinha, Crianca, Doacao e validações
+├── infra/      repositório em memória, gateway de pagamento e notificador simulados
+└── server.js   sobe a API
+tests/          testes Jest de cada classe, dos serviços e da API (supertest)
+docs/sprint3/   casos de uso, Kanban e daily da sprint
+```
+
+### Como rodar a API
+
+```bash
+npm install
+npm start      # sobe em http://localhost:3000 (ou na porta definida em PORT)
+```
+
+| Método e rota | Caso de uso | O que faz |
+|---|---|---|
+| `GET /saude` | | Verifica se a API está no ar |
+| `POST /escolinhas` | UC-02 | Cadastra uma escolinha, que nasce `PENDENTE` |
+| `POST /escolinhas/:id/aprovar` | UC-11 | Aprova o cadastro da escolinha |
+| `POST /escolinhas/:id/criancas` | UC-03 | Cadastra uma criança (só escolinha aprovada) |
+| `POST /criancas/:id/necessidades` | UC-04 | Cadastra uma necessidade para a criança |
+| `GET /criancas?cidade=&uf=&tipo=` | UC-06 | Busca crianças com necessidades abertas |
+| `GET /criancas/:id` | UC-07 | Perfil público da criança |
+| `POST /necessidades/:id/doacoes` | UC-08, UC-09 | Realiza a doação e devolve o comprovante |
+
+As respostas nunca trazem nome civil, data de nascimento ou endereço da criança (RF06, RNF01).
+
+### O que ainda não existe
+
+- Autenticação e papéis de usuário (UC-01): por enquanto as rotas são abertas.
+- Gateway de pagamento e serviço de e-mail reais (hoje são simulados).
+- Persistência em PostgreSQL (hoje os dados ficam em memória e somem ao reiniciar).
+- Front-end em React.
+- Painel da escolinha (UC-10) e gestão de usuários e moderação (UC-12, UC-13).
+
+### Documentação da sprint
+
+- [Casos de uso implementados](docs/sprint3/casos-de-uso.md): rastreabilidade entre UC, requisitos, código, testes e rotas.
+- [Kanban](docs/sprint3/kanban.md), espelho do [quadro no Notion](https://app.notion.com/p/25916e0ce8714718aac8ae09499e857b).
+- [Daily semanal](docs/sprint3/daily.md).
+
 ## Esteira de CI/CD
 
 O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda no GitHub Actions a cada
