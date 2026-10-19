@@ -7,6 +7,10 @@ on:
     branches: [main, dev]
   workflow_dispatch:
 
+# Permissão mínima para todos os jobs; entrega e implantação pedem a mais só o que usam.
+permissions:
+  contents: read
+
 jobs:
   testes:
     name: Build e testes (Node ${{ matrix.node }})
