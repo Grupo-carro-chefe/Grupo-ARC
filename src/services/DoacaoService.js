@@ -2,6 +2,8 @@
 
 const { Doacao } = require('../domain/Doacao');
 const { emCentavos } = require('../domain/validacoes');
+const { RegraNegocioError } = require('../domain/erros');
+const { BloqueioEmMemoria } = require('../infra/BloqueioEmMemoria');
 
 /** Pagamento recusado pelo gateway (UC-08, fluxo A1): nada é registrado. */
 class PagamentoRecusadoError extends Error {
@@ -13,11 +15,20 @@ class PagamentoRecusadoError extends Error {
 
 /** Orquestra o caso de uso Realizar Doação (UC-08) e a emissão do comprovante (UC-09). */
 class DoacaoService {
-  constructor({ gateway, notificador, doacoes }) {
+  /**
+   * @param {object} dependencias
+   * @param {object} dependencias.gateway
+   * @param {object} dependencias.notificador
+   * @param {{salvar(doacao): *}} dependencias.doacoes
+   * @param {{executar(necessidade, trabalho): Promise<*>}} [dependencias.bloqueio]  serializa as
+   *   doações de uma necessidade e grava a doação junto com o arrecadado. Sem informar, usa a
+   *   fila em memória (um processo só); com PostgreSQL, `BloqueioPostgres` (linha travada).
+   */
+  constructor({ gateway, notificador, doacoes, bloqueio }) {
     this.gateway = gateway;
     this.notificador = notificador;
     this.doacoes = doacoes;
-    this._filas = new Map();
+    this.bloqueio = bloqueio ?? new BloqueioEmMemoria({ salvar: (doacao) => this.doacoes.salvar(doacao) });
   }
 
   /**
@@ -33,51 +44,49 @@ class DoacaoService {
    * @param {boolean} [dados.anonima]
    * @returns {Promise<object>} comprovante da doação
    */
-  async realizar(dados) {
-    // Doações para a mesma necessidade rodam uma de cada vez: sem isso, duas doações simultâneas
-    // passariam na validação e a segunda seria cobrada e só depois rejeitada por exceder a meta.
-    // ponytail: fila em memória, vale só para um processo; com PostgreSQL, trocar por lock na linha.
-    const id = dados.necessidade.id;
-    const executar = () => this._realizar(dados);
-    const atual = (this._filas.get(id) ?? Promise.resolve()).then(executar, executar);
-    this._filas.set(id, atual);
-    return atual;
-  }
-
-  async _realizar({ necessidade, escolinhaId, doadorId, valor, formaPagamento, anonima = false }) {
+  async realizar({ necessidade, escolinhaId, doadorId, valor, formaPagamento, anonima = false }) {
     const dados = { necessidadeId: necessidade.id, doadorId, valor, formaPagamento, anonima };
-
-    // 1. Nenhuma cobrança acontece com dados inválidos. Daqui em diante vale o valor já
-    // arredondado em centavos, para que o valor cobrado seja o mesmo valor registrado.
-    const { valor: valorValidado } = new Doacao(dados);
-    if (!necessidade.estaAberta()) {
-      throw new Error(`Não é possível doar para uma necessidade com status ${necessidade.status}.`);
-    }
-    if (emCentavos(valorValidado) > emCentavos(necessidade.valorRestante())) {
-      throw new Error(`Valor da doação excede o restante da meta (R$ ${necessidade.valorRestante().toFixed(2)}).`);
-    }
-
-    // 2. Cobrança. Recusada: nada é gravado nem notificado (A1).
-    const pagamento = await this.gateway.processar({ valor: valorValidado, formaPagamento });
-    if (!pagamento.aprovado) {
-      throw new PagamentoRecusadoError();
-    }
-
-    // 3. Registro da doação confirmada. Se o registro falhar, a cobrança é estornada antes de
-    // devolver o erro, para o doador nunca pagar por uma doação que não ficou registrada.
-    // ponytail: com PostgreSQL, registrar e salvar devem ficar na mesma transação.
+    let pagamento = null;
     let doacao;
+
+    // Doações para a mesma necessidade rodam uma de cada vez (ver `bloqueio`): sem isso, duas
+    // doações simultâneas passariam na validação e a segunda seria cobrada e só depois rejeitada
+    // por exceder a meta. Dentro do bloqueio, `atual` é a necessidade no estado mais recente.
     try {
-      doacao = new Doacao({ ...dados, valor: valorValidado, transacaoId: pagamento.transacaoId });
-      necessidade.registrarDoacao(doacao.valor);
-      this.doacoes.salvar(doacao);
+      doacao = await this.bloqueio.executar(necessidade, async (atual, tx) => {
+        // 1. Nenhuma cobrança acontece com dados inválidos. Daqui em diante vale o valor já
+        // arredondado em centavos, para que o valor cobrado seja o mesmo valor registrado.
+        const { valor: valorValidado } = new Doacao(dados);
+        if (!atual.estaAberta()) {
+          throw new RegraNegocioError(`Não é possível doar para uma necessidade com status ${atual.status}.`);
+        }
+        if (emCentavos(valorValidado) > emCentavos(atual.valorRestante())) {
+          throw new RegraNegocioError(`Valor da doação excede o restante da meta (R$ ${atual.valorRestante().toFixed(2)}).`);
+        }
+
+        // 2. Cobrança. Recusada: nada é gravado nem notificado (A1).
+        pagamento = await this.gateway.processar({ valor: valorValidado, formaPagamento });
+        if (!pagamento.aprovado) {
+          throw new PagamentoRecusadoError();
+        }
+
+        // 3. Registro da doação confirmada, na mesma unidade do arrecadado (no PostgreSQL, a mesma
+        // transação).
+        const nova = new Doacao({ ...dados, valor: valorValidado, transacaoId: pagamento.transacaoId });
+        await tx.registrar(nova);
+        return nova;
+      });
     } catch (erro) {
-      await this._estornar(pagamento.transacaoId);
+      // Se o registro (ou o COMMIT) falhou depois da cobrança, ela é estornada antes de devolver
+      // o erro, para o doador nunca pagar por uma doação que não ficou registrada.
+      if (pagamento?.aprovado) {
+        await this._estornar(pagamento.transacaoId);
+      }
       throw erro;
     }
 
-    // 4. Notificação à escolinha; doação anônima não revela o doador (A2).
-    // Uma falha aqui não desfaz a doação já cobrada e registrada: só é registrada no log.
+    // 4. Notificação à escolinha; doação anônima não revela o doador (A2). Já com a doação
+    // confirmada. Uma falha aqui não desfaz a doação já cobrada e registrada: só vai para o log.
     try {
       await this.notificador.notificarDoacaoRecebida({
         escolinhaId,

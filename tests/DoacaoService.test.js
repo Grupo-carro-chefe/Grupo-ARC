@@ -228,3 +228,33 @@ describe('DoacaoService (UC-08)', () => {
     });
   });
 });
+
+describe('BloqueioEmMemoria: limpeza da fila (L6)', () => {
+  const { BloqueioEmMemoria } = require('../src/infra/BloqueioEmMemoria');
+
+  test('remove a entrada da fila quando a última tarefa da necessidade termina', async () => {
+    const bloqueio = new BloqueioEmMemoria({ salvar: async () => {} });
+    const n = { id: 'n1', registrarDoacao: () => {} };
+
+    await Promise.all([bloqueio.executar(n, async () => 1), bloqueio.executar(n, async () => 2)]);
+    expect(bloqueio._filas.size).toBe(0);
+
+    await expect(bloqueio.executar(n, async () => { throw new Error('x'); })).rejects.toThrow('x');
+    expect(bloqueio._filas.size).toBe(0);
+  });
+
+  test('não remove a entrada enquanto ainda há tarefa esperando', async () => {
+    const bloqueio = new BloqueioEmMemoria({ salvar: async () => {} });
+    const n = { id: 'n1' };
+    let liberar;
+    const primeira = bloqueio.executar(n, () => new Promise((r) => { liberar = r; }));
+    const segunda = bloqueio.executar(n, async () => 'b');
+    await new Promise((r) => setImmediate(r));
+
+    liberar();
+    await primeira;
+    expect(bloqueio._filas.size).toBe(1);
+    await segunda;
+    expect(bloqueio._filas.size).toBe(0);
+  });
+});
