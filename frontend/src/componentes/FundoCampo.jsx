@@ -2,45 +2,48 @@ import { useLayoutEffect, useRef } from 'react';
 import { gsap, reduzido } from '../movimento';
 
 /**
- * Fundo decorativo: campo visto de cima (grama com faixas, ruído estático e linhas brancas) sob um véu claro.
- * As linhas são riscadas como giz uma vez por montagem (cerca de 1,2 s); com reduzido() já ficam desenhadas.
- * `penalti` põe a marca do pênalti atrás do card da criança (em telas pequenas as áreas somem pelo CSS).
+ * Fundo decorativo: campo inteiro visto de cima (105 x 68 em escala), centralizado, com grama em faixas,
+ * ruído estático e um véu claro. As linhas são riscadas a partir do centro, espelhadas, uma vez por montagem
+ * (cerca de 1,4 s); sem JS ou com reduzido() já ficam todas desenhadas.
  */
-export function FundoCampo({ penalti = false }) {
+export function FundoCampo() {
   const raiz = useRef(null);
 
   useLayoutEffect(() => {
     if (reduzido() || !raiz.current) return undefined;
     const ctx = gsap.context(() => {
       const riscar = (seletor, duracao, inicio, tl) => {
-        const alvos = gsap.utils.toArray(seletor);
-        if (alvos.length) tl.fromTo(alvos, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: duracao, ease: 'power2.inOut' }, inicio);
+        tl.fromTo(seletor, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: duracao, ease: 'power2.inOut' }, inicio);
       };
       gsap.set('.fundo-campo__linha', { strokeDasharray: 1, strokeDashoffset: 1 });
-      gsap.set('.fundo-campo__ponto', { opacity: 0, transformOrigin: '50% 50%', scale: 0 });
+      gsap.set('.fundo-campo__ponto', { opacity: 0, transformOrigin: '50% 50%', transformBox: 'fill-box', scale: 0.4 });
       const tl = gsap.timeline();
-      riscar('.fundo-campo__g1', 0.55, 0, tl);
-      riscar('.fundo-campo__g2', 0.55, 0.4, tl);
-      tl.to('.fundo-campo__ponto', { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.inOut', stagger: 0.08, clearProps: 'all' }, 0.9);
+      riscar('.fundo-campo__meio', 0.45, 0, tl);
+      riscar('.fundo-campo__circulo', 0.55, 0.25, tl);
+      riscar('.fundo-campo__contorno', 0.7, 0.35, tl);
+      riscar('.fundo-campo__area', 0.5, 0.75, tl);
+      riscar('.fundo-campo__arco', 0.35, 1.05, tl);
+      tl.to('.fundo-campo__ponto', { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.inOut', clearProps: 'all' }, 1.15);
     }, raiz);
     return () => ctx.revert();
   }, []);
 
+  const l = (classe, d) => <path className={`fundo-campo__linha ${classe}`} pathLength="1" d={d} />;
   return (
     <div className="fundo-campo" aria-hidden="true" ref={raiz}>
-      <svg viewBox="60 100 1200 600" preserveAspectRatio="xMinYMin slice" focusable="false">
-        <g className="fundo-campo__linhas">
-          <rect className="fundo-campo__linha fundo-campo__g1" pathLength="1" x="90" y="40" width="1090" height="520" />
-          <line className="fundo-campo__linha fundo-campo__g1" pathLength="1" x1="880" y1="40" x2="880" y2="560" />
-          <circle className="fundo-campo__linha fundo-campo__g2 fundo-campo__meio" pathLength="1" cx="880" cy="300" r="85" />
-          <circle className="fundo-campo__ponto fundo-campo__meio" cx="880" cy="300" r="5" />
-          <g className="fundo-campo__areas">
-            <rect className="fundo-campo__linha fundo-campo__g2" pathLength="1" x="90" y="130" width="240" height="340" />
-            <rect className="fundo-campo__linha fundo-campo__g2" pathLength="1" x="90" y="215" width="85" height="170" />
-            <path className="fundo-campo__linha fundo-campo__g2" pathLength="1" d="M330 230 A 85 85 0 0 1 330 370" />
-            <circle className={`fundo-campo__ponto${penalti ? '' : ' fundo-campo__ponto--oculto'}`} cx="255" cy="300" r="5" />
-          </g>
-        </g>
+      <svg viewBox="-10 -10 1070 700" preserveAspectRatio="xMidYMid meet" focusable="false">
+        {l('fundo-campo__meio', 'M525 340 V0')}
+        {l('fundo-campo__meio', 'M525 340 V680')}
+        {l('fundo-campo__circulo', 'M525 248.5 A91.5 91.5 0 1 1 524.9 248.5')}
+        {l('fundo-campo__contorno', 'M525 0 H0 V680 H525')}
+        {l('fundo-campo__contorno', 'M525 0 H1050 V680 H525')}
+        {l('fundo-campo__area', 'M0 138.5 H165 V541.5 H0 M0 248.5 H55 V431.5 H0')}
+        {l('fundo-campo__area', 'M1050 138.5 H885 V541.5 H1050 M1050 248.5 H995 V431.5 H1050')}
+        {l('fundo-campo__arco', 'M165 267 A91.5 91.5 0 0 1 165 413')}
+        {l('fundo-campo__arco', 'M885 267 A91.5 91.5 0 0 0 885 413')}
+        <circle className="fundo-campo__ponto" cx="525" cy="340" r="5" />
+        <circle className="fundo-campo__ponto" cx="110" cy="340" r="5" />
+        <circle className="fundo-campo__ponto" cx="940" cy="340" r="5" />
       </svg>
     </div>
   );

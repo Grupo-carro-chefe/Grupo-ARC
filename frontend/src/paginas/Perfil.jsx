@@ -90,7 +90,7 @@ export function Perfil({ id, escolinhas }) {
 
   return (
     <section className="pagina perfil" ref={raiz}>
-      <FundoCampo penalti />
+      <FundoCampo />
       <a className="voltar" href="#/">Voltar para a busca</a>
       <div className="perfil__grade">
         <aside className="perfil__cartao">
