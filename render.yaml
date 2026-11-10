@@ -1,0 +1,19 @@
+# Blueprint do Render: hospeda a API e o front-end (pasta public/) num único serviço web.
+# Referência: https://render.com/docs/yaml-spec
+services:
+  - type: web
+    name: doagol
+    runtime: node
+    plan: free
+    region: virginia
+    branch: main
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /saude
+    # Só publica depois que a esteira do GitHub Actions passar no commit da main.
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DADOS_EXEMPLO
+        value: "true"
