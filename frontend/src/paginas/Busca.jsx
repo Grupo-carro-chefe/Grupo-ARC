@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api';
 import { estados, municipios, UFS_PADRAO } from '../externo';
 import { TIPOS } from '../formatos';
+import { Seletor } from '../componentes/Seletor';
 import { Figurinha } from '../componentes/Figurinha';
 import { Hero } from '../componentes/Hero';
 import { TelaProduto, Tour } from '../componentes/Produto';
@@ -81,8 +82,9 @@ export function Busca({ escolinhas }) {
     };
   }, [estado.dados]);
 
-  const mudar = (campo) => (e) => {
-    const novo = { ...filtros, [campo]: e.target.value };
+  const mudar = (campo) => (e) => mudarValor(campo, e.target.value);
+  const mudarValor = (campo, valor) => {
+    const novo = { ...filtros, [campo]: valor };
     if (campo === 'uf') novo.cidade = '';
     setFiltros(novo);
     if (campo !== 'cidade') buscar(novo).then(mostrarResultados);
@@ -94,6 +96,15 @@ export function Busca({ escolinhas }) {
     buscar(vazio).then(mostrarResultados);
   }
 
+  const opcoesUf = useMemo(() => [
+    { valor: '', rotulo: 'Todos' },
+    ...ufs.lista.map((u) => ({ valor: u.sigla, rotulo: u.nome, sigla: u.sigla })),
+  ], [ufs.lista]);
+  const opcoesTipo = useMemo(() => [
+    { valor: '', rotulo: 'Todos' },
+    ...Object.entries(TIPOS).map(([k, v]) => ({ valor: k, rotulo: v })),
+  ], []);
+
   const porId = Object.fromEntries(escolinhas.map((e) => [e.id, e]));
   const temFiltro = filtros.uf || filtros.cidade || filtros.tipo;
 
@@ -103,10 +114,14 @@ export function Busca({ escolinhas }) {
       <form className="filtros" onSubmit={(e) => { e.preventDefault(); buscar().then(mostrarResultados); }}>
         <label className="campo">
           <span className="campo__rotulo">Estado</span>
-          <select value={filtros.uf} onChange={mudar('uf')}>
-            <option value="">Todos</option>
-            {ufs.lista.map((u) => <option key={u.sigla} value={u.sigla}>{u.nome}</option>)}
-          </select>
+          <Seletor
+            value={filtros.uf}
+            onChange={(v) => mudarValor('uf', v)}
+            opcoes={opcoesUf}
+            busca
+            placeholderBusca="Buscar estado…"
+            textoVazio="Nenhum estado encontrado"
+          />
         </label>
         <label className="campo">
           <span className="campo__rotulo">Cidade</span>
@@ -117,16 +132,17 @@ export function Busca({ escolinhas }) {
         </label>
         <label className="campo">
           <span className="campo__rotulo">Tipo de pedido</span>
-          <select value={filtros.tipo} onChange={mudar('tipo')}>
-            <option value="">Todos</option>
-            {Object.entries(TIPOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
+          <Seletor
+            value={filtros.tipo}
+            onChange={(v) => mudarValor('tipo', v)}
+            opcoes={opcoesTipo}
+            variante="etiqueta"
+          />
         </label>
         <div className="filtros__acoes">
           <button type="submit" className="botao botao--principal">Buscar</button>
           {temFiltro && <button type="button" className="botao botao--leve" onClick={limpar}>Limpar filtros</button>}
         </div>
-        {ufs.fonte === 'ibge' && <p className="filtros__fonte">Estados e cidades vêm da API de localidades do IBGE.</p>}
       </form>
       </Hero>
 
