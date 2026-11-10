@@ -101,9 +101,9 @@ As respostas nunca trazem nome civil, data de nascimento ou endereço da crianç
 
 ### O que ainda não existe
 
-- Autenticação e papéis de usuário (UC-01): por enquanto as rotas são abertas.
+- Autenticação e papéis de usuário (UC-01), ainda planejados: por enquanto as rotas são abertas.
 - Gateway de pagamento e serviço de e-mail reais (hoje são simulados).
-- Persistência em PostgreSQL (hoje os dados ficam em memória e somem ao reiniciar).
+- Persistência em PostgreSQL: hoje os dados ficam em memória e somem ao reiniciar. A troca está em andamento na branch `feat/banco-neon` (ver [Banco de dados](#banco-de-dados)).
 - Gestão de usuários e moderação (UC-12, UC-13).
 
 ### Documentação da sprint
@@ -114,21 +114,32 @@ As respostas nunca trazem nome civil, data de nascimento ou endereço da crianç
 
 ## TG3: implementação da aplicação (MVP)
 
-**Aplicação no ar:** `https://doagol.onrender.com` (endereço gerado pelo Render; atualize aqui se for diferente).
+**Aplicação no ar:** `https://doagol.onrender.com`. O plano Free do Render dorme após 15 minutos sem acesso, e a primeira abertura depois disso demora para carregar.
 
 O MVP junta o back-end da Sprint 3 a um front-end em **React**, servido pela própria API e hospedado no
 **Render**. Os dados de exemplo (escolinhas, crianças e pedidos fictícios) são carregados ao subir o servidor,
-para a demonstração nunca começar vazia.
+para a demonstração nunca começar vazia. A variável `DADOS_EXEMPLO=false` desliga esse carregamento.
 
 ### Telas
 
 | Tela | Caso de uso | O que mostra |
 |---|---|---|
-| Busca (`#/`) | UC-06 | Crianças com pedidos abertos, com filtros por estado, cidade e tipo de pedido |
+| Busca (`#/`) | UC-06 | Hero animado, filtros de estado, cidade e tipo de pedido, e um cartão por criança com pedidos abertos |
 | Perfil da criança (`#/crianca/:id`) | UC-07 | Apelido, idade, cidade, escolinha e o progresso de cada pedido, sem dados sensíveis |
 | Doação | UC-08 | Valor (com sugestões), forma de pagamento, doação anônima e validação da meta |
 | Comprovante | UC-09 | Código, valor, forma de pagamento, data e transação |
 | Área da escolinha (`#/escolinha`) | UC-02, UC-11, UC-03, UC-04 | Cadastro da escolinha, aprovação, cadastro de criança e de pedido, em passos |
+
+Na busca, a página traz ainda:
+
+- **Hero animado:** o gramado 3D desce com a câmera, o giz risca o meio de campo, a bola rola até a marca central e o título entra palavra por palavra (`frontend/src/componentes/Hero.jsx`).
+- **O app por dentro:** uma janela do app inclinada que endireita com a rolagem, com o total contando e dois balões (`frontend/src/componentes/Produto.jsx`, `TelaProduto`).
+- **Cartões:** cada pedido mostra a barra, o valor arrecadado e a porcentagem, que contam até o valor real. Pedidos acima de 70% ganham o selo "Quase lá" (`frontend/src/componentes/Figurinha.jsx`).
+- **Como doar:** três passos com uma tela presa ao lado do texto, que troca entre busca, perfil e comprovante conforme a rolagem. Vale em telas de 861 px ou mais (`Tour` em `frontend/src/componentes/Produto.jsx`).
+- **Seletor próprio:** estado e tipo de pedido usam um seletor do DoaGol com campo de busca, no lugar do `<select>` nativo. O campo de cidade mostra sugestões do IBGE (`frontend/src/componentes/Seletor.jsx`).
+- **Botão Animações:** liga e desliga o movimento, grava a escolha no navegador e recarrega a página para reiniciar as animações. Sem escolha salva, vale a preferência de movimento reduzido do sistema (`frontend/src/main.jsx`, `frontend/src/movimento.js`).
+
+**Stack do front:** React 19, compilado com esbuild; GSAP com ScrollTrigger para as animações e Lenis para a rolagem suave (`frontend/package.json`).
 
 ### Consumo de APIs
 
@@ -139,6 +150,12 @@ para a demonstração nunca começar vazia.
 | [ViaCEP](https://viacep.com.br) | cadastro de criança | Preenche rua, bairro, cidade e UF a partir do CEP |
 
 As APIs externas são opcionais: se não responderem, os campos continuam funcionando digitados à mão.
+
+### Banco de dados
+
+- O PostgreSQL fica no **Neon**, na região AWS us-east-1.
+- A connection string vai na variável `DATABASE_URL`: no Environment do serviço `doagol` no Render e num `.env.local` na máquina local. O `.gitignore` ignora `.env.*`, então o arquivo local não entra no repositório.
+- **Em andamento na branch `feat/banco-neon`:** a troca do repositório em memória pelo PostgreSQL. Enquanto essa branch não entrar na `main`, a API guarda os dados em memória e não lê `DATABASE_URL`.
 
 ### Estrutura
 
@@ -167,9 +184,9 @@ O `public/app.js` compilado fica versionado, para o deploy não depender de buil
 
 ### Hospedagem na nuvem (Render)
 
-O arquivo [`render.yaml`](render.yaml) cria um serviço web gratuito que roda `npm ci --omit=dev` e `npm start`,
+O Blueprint `doagol` em [`render.yaml`](render.yaml) cria um serviço web gratuito que roda `npm ci --omit=dev` e `npm start`,
 verifica a saúde em `/saude` e só publica um commit da `main` depois que a esteira do GitHub Actions passa
-(`autoDeployTrigger: checksPass`). O passo a passo está em [docs/tg3/deploy-render.md](docs/tg3/deploy-render.md).
+(`autoDeployTrigger: checksPass`). Cada push na `main` segue o caminho: GitHub Actions, depois Render. O passo a passo está em [docs/tg3/deploy-render.md](docs/tg3/deploy-render.md).
 
 ```
 push na main ──> GitHub Actions (testes + cobertura) ──✓──> Render: npm ci + npm start ──> doagol.onrender.com
