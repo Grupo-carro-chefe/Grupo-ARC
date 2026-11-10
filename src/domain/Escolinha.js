@@ -33,6 +33,16 @@ class Escolinha {
     this.motivoRejeicao = null;
   }
 
+  /**
+   * Recria uma escolinha a partir do que foi salvo (ex.: lida do banco), no estado exato em que
+   * estava, sem refazer as regras de criação.
+   */
+  static reconstituir({ id, nome, cidade, uf, status, motivoRejeicao = null }) {
+    const escolinha = Object.create(Escolinha.prototype);
+    Object.assign(escolinha, { id, nome, cidade, uf, status, motivoRejeicao });
+    return escolinha;
+  }
+
   estaAprovada() {
     return this.status === StatusEscolinha.APROVADA;
   }

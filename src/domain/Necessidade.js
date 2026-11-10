@@ -69,6 +69,23 @@ class Necessidade {
     this.status = StatusNecessidade.ABERTA;
   }
 
+  /**
+   * Recria uma necessidade a partir do que foi salvo (ex.: lida do banco), com meta e arrecadado
+   * em centavos e o status exato em que estava, sem refazer as regras de criação.
+   */
+  static reconstituir({ id, tipo, descricao, estimadoCentavos, arrecadadoCentavos, status }) {
+    const necessidade = Object.create(Necessidade.prototype);
+    Object.assign(necessidade, {
+      id,
+      tipo,
+      descricao,
+      _estimadoCentavos: estimadoCentavos,
+      _arrecadadoCentavos: arrecadadoCentavos,
+      status,
+    });
+    return necessidade;
+  }
+
   get valorEstimado() {
     return this._estimadoCentavos / 100;
   }

@@ -83,6 +83,25 @@ class Crianca {
     this._necessidades = [];
   }
 
+  /**
+   * Recria uma criança a partir do que foi salvo (ex.: lida do banco). Não repete a checagem de
+   * idade: quem foi cadastrado aos 17 anos continua no sistema depois de fazer 18.
+   * `dataNascimento` é 'AAAA-MM-DD'; `necessidades` são objetos Necessidade já reconstituídos.
+   */
+  static reconstituir({ id, escolinhaId, apelido, nomeCivil, dataNascimento, endereco, necessidades = [] }) {
+    const crianca = Object.create(Crianca.prototype);
+    Object.assign(crianca, {
+      id,
+      apelido,
+      escolinhaId,
+      _nomeCivil: nomeCivil,
+      _dataNascimento: dataEmUtc(dataNascimento),
+      _endereco: Object.freeze({ ...endereco }),
+      _necessidades: [...necessidades],
+    });
+    return crianca;
+  }
+
   get cidade() {
     return this._endereco.cidade;
   }

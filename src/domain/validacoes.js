@@ -28,4 +28,9 @@ function emCentavos(valor) {
   return Math.round(valor * 100);
 }
 
-module.exports = { UFS, textoObrigatorio, ufValida, emCentavos };
+/** Remove acentos, espaços nas pontas e diferença de caixa ("São Paulo" === "sao paulo"). */
+function normalizar(texto) {
+  return String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+}
+
+module.exports = { UFS, textoObrigatorio, ufValida, emCentavos, normalizar };
