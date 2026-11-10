@@ -6,8 +6,36 @@ import { reais } from './formatos';
 gsap.registerPlugin(ScrollTrigger);
 export { gsap, ScrollTrigger };
 
-/** Quem pede menos movimento no sistema vê o estado final: sem Lenis, sem cena presa, sem contagem. */
-export const reduzido = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CHAVE = 'doagol:animacoes';
+
+/** Escolha salva do usuário ('ligadas' | 'desligadas') ou null para seguir o sistema. */
+export function lerEscolha() {
+  try {
+    const v = window.localStorage.getItem(CHAVE);
+    return v === 'ligadas' || v === 'desligadas' ? v : null;
+  } catch { return null; }
+}
+
+/** Grava a escolha; sem armazenamento disponível, a troca só vale até recarregar. */
+export function gravarEscolha(valor) {
+  try { window.localStorage.setItem(CHAVE, valor); } catch { /* sem localStorage */ }
+}
+
+/** Sem escolha salva, vale o sistema (prefers-reduced-motion); com escolha, ela manda. */
+export function reduzido() {
+  const escolha = lerEscolha();
+  if (escolha) return escolha === 'desligadas';
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** Marca a raiz para o CSS seguir a mesma regra do JS. Chamar antes de renderizar. */
+export function aplicarPreferencia() {
+  const escolha = lerEscolha();
+  const raiz = document.documentElement;
+  raiz.classList.toggle('animacoes-ligadas', escolha === 'ligadas');
+  raiz.classList.toggle('animacoes-desligadas', escolha === 'desligadas');
+}
+
 export const telaGrande = '(min-width: 861px)';
 
 let lenis = null;

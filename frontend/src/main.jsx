@@ -4,7 +4,7 @@ import { api } from './api';
 import { Busca } from './paginas/Busca';
 import { Perfil } from './paginas/Perfil';
 import { Escolinha } from './paginas/Escolinha';
-import { iniciarRolagem, voltarAoTopo } from './movimento';
+import { iniciarRolagem, voltarAoTopo, reduzido, gravarEscolha, aplicarPreferencia } from './movimento';
 
 /** Rotas por hash (#/, #/crianca/:id, #/escolinha): funcionam em qualquer hospedagem estática. */
 function lerRota() {
@@ -20,6 +20,20 @@ function Marca() {
       <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="2.5" />
       <path d="M16 9 l6.2 4.5 -2.4 7.3 h-7.6 l-2.4 -7.3 z" fill="currentColor" />
     </svg>
+  );
+}
+
+/** Liga ou desliga as animações; a escolha vale sobre o sistema e a página recarrega para reiniciar o movimento. */
+function BotaoAnimacoes() {
+  const ligadas = !reduzido();
+  const trocar = () => {
+    gravarEscolha(ligadas ? 'desligadas' : 'ligadas');
+    window.location.reload();
+  };
+  return (
+    <button type="button" className="menu__animacoes" aria-pressed={ligadas} onClick={trocar}>
+      Animações: {ligadas ? 'ligadas' : 'desligadas'}
+    </button>
   );
 }
 
@@ -46,6 +60,7 @@ function App() {
         <nav className="menu" aria-label="Principal">
           <a href="#/" aria-current={rota.pagina !== 'escolinha' ? 'page' : undefined}>Quero doar</a>
           <a href="#/escolinha" aria-current={rota.pagina === 'escolinha' ? 'page' : undefined}>Sou escolinha</a>
+          <BotaoAnimacoes />
         </nav>
       </header>
       <main>
@@ -61,4 +76,5 @@ function App() {
   );
 }
 
+aplicarPreferencia();
 createRoot(document.getElementById('raiz')).render(<App />);
