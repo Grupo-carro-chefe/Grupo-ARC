@@ -8,6 +8,7 @@ const { DoacaoService, PagamentoRecusadoError } = require('../services/DoacaoSer
 const { RepositorioEmMemoria } = require('../infra/RepositorioEmMemoria');
 const { GatewayPagamentoSimulado } = require('../infra/GatewayPagamentoSimulado');
 const { NotificadorEmMemoria } = require('../infra/NotificadorEmMemoria');
+const { carregarDadosExemplo } = require('../infra/dadosExemplo');
 
 /** Recurso inexistente; vira HTTP 404. */
 class NaoEncontradoError extends Error {}
@@ -27,8 +28,17 @@ function buscarOuFalhar(repositorio, id, mensagem) {
  * Ainda não há autenticação (UC-01): o doadorId vem no corpo da requisição e qualquer um
  * pode chamar as rotas. Aprovar escolinha (UC-11) é uma rota aberta por enquanto, e deverá
  * ficar restrita ao administrador quando o UC-01 for implementado.
+ *
+ * @param {object} [opcoes]
+ * @param {boolean} [opcoes.dadosExemplo]  carrega escolinhas, crianças e necessidades fictícias
+ * @param {string|null} [opcoes.pastaPublica]  pasta do front-end (build do React) servida em '/'
  */
-function criarApp({ gateway = new GatewayPagamentoSimulado(), notificador = new NotificadorEmMemoria() } = {}) {
+function criarApp({
+  gateway = new GatewayPagamentoSimulado(),
+  notificador = new NotificadorEmMemoria(),
+  dadosExemplo = false,
+  pastaPublica = null,
+} = {}) {
   const escolinhas = new RepositorioEmMemoria();
   const criancas = new RepositorioEmMemoria();
   const necessidades = new RepositorioEmMemoria();
@@ -36,7 +46,23 @@ function criarApp({ gateway = new GatewayPagamentoSimulado(), notificador = new 
   const busca = new BuscaService({ criancas });
   const doacaoService = new DoacaoService({ gateway, notificador, doacoes });
 
+  if (dadosExemplo) {
+    carregarDadosExemplo({ escolinhas, criancas, necessidades });
+  }
+
   const app = express();
+
+  // CORS: permite que o front-end hospedado em outro endereço (ex.: GitHub Pages) chame a API.
+  app.use((req, res, next) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+    return next();
+  });
+
   app.use(express.json());
 
   app.get('/saude', (req, res) => {
@@ -48,6 +74,17 @@ function criarApp({ gateway = new GatewayPagamentoSimulado(), notificador = new 
     const { nome, cidade, uf } = req.body ?? {};
     const escolinha = escolinhas.salvar(new Escolinha({ nome, cidade, uf }));
     res.status(201).json(escolinha);
+  });
+
+  // Lista de escolinhas, usada pelo front-end no perfil da criança e no painel da escolinha.
+  app.get('/escolinhas', (req, res) => {
+    res.json(escolinhas.listar());
+  });
+
+  // UC-10 (parcial): crianças de uma escolinha, só com o perfil público.
+  app.get('/escolinhas/:id/criancas', (req, res) => {
+    const escolinha = buscarOuFalhar(escolinhas, req.params.id, 'Escolinha não encontrada.');
+    res.json(criancas.listar().filter((c) => c.escolinhaId === escolinha.id).map((c) => c.perfilPublico()));
   });
 
   // UC-11: aprovação do cadastro (rota aberta até existir o papel de administrador).
@@ -108,6 +145,11 @@ function criarApp({ gateway = new GatewayPagamentoSimulado(), notificador = new 
     });
     res.status(201).json(comprovante);
   });
+
+  // Front-end React já compilado (pasta public/), servido pela própria API no deploy.
+  if (pastaPublica) {
+    app.use(express.static(pastaPublica));
+  }
 
   app.use((err, req, res, next) => {
     if (err instanceof NaoEncontradoError) {

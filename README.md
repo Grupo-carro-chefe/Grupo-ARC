@@ -87,7 +87,9 @@ npm start      # sobe em http://localhost:3000 (ou na porta definida em PORT)
 | Método e rota | Caso de uso | O que faz |
 |---|---|---|
 | `GET /saude` | | Verifica se a API está no ar |
+| `GET /escolinhas` | | Lista as escolinhas (usada pelo front-end) |
 | `POST /escolinhas` | UC-02 | Cadastra uma escolinha, que nasce `PENDENTE` |
+| `GET /escolinhas/:id/criancas` | UC-10 (parcial) | Crianças da escolinha, só com o perfil público |
 | `POST /escolinhas/:id/aprovar` | UC-11 | Aprova o cadastro da escolinha |
 | `POST /escolinhas/:id/criancas` | UC-03 | Cadastra uma criança (só escolinha aprovada) |
 | `POST /criancas/:id/necessidades` | UC-04 | Cadastra uma necessidade para a criança |
@@ -102,14 +104,84 @@ As respostas nunca trazem nome civil, data de nascimento ou endereço da crianç
 - Autenticação e papéis de usuário (UC-01): por enquanto as rotas são abertas.
 - Gateway de pagamento e serviço de e-mail reais (hoje são simulados).
 - Persistência em PostgreSQL (hoje os dados ficam em memória e somem ao reiniciar).
-- Front-end em React.
-- Painel da escolinha (UC-10) e gestão de usuários e moderação (UC-12, UC-13).
+- Gestão de usuários e moderação (UC-12, UC-13).
 
 ### Documentação da sprint
 
 - [Casos de uso implementados](docs/sprint3/casos-de-uso.md): rastreabilidade entre UC, requisitos, código, testes e rotas.
 - [Kanban](docs/sprint3/kanban.md), espelho do [quadro no Notion](https://app.notion.com/p/25916e0ce8714718aac8ae09499e857b).
 - [Daily semanal](docs/sprint3/daily.md).
+
+## TG3: implementação da aplicação (MVP)
+
+**Aplicação no ar:** `https://doagol.onrender.com` (endereço gerado pelo Render; atualize aqui se for diferente).
+
+O MVP junta o back-end da Sprint 3 a um front-end em **React**, servido pela própria API e hospedado no
+**Render**. Os dados de exemplo (escolinhas, crianças e pedidos fictícios) são carregados ao subir o servidor,
+para a demonstração nunca começar vazia.
+
+### Telas
+
+| Tela | Caso de uso | O que mostra |
+|---|---|---|
+| Busca (`#/`) | UC-06 | Crianças com pedidos abertos, com filtros por estado, cidade e tipo de pedido |
+| Perfil da criança (`#/crianca/:id`) | UC-07 | Apelido, idade, cidade, escolinha e o progresso de cada pedido, sem dados sensíveis |
+| Doação | UC-08 | Valor (com sugestões), forma de pagamento, doação anônima e validação da meta |
+| Comprovante | UC-09 | Código, valor, forma de pagamento, data e transação |
+| Área da escolinha (`#/escolinha`) | UC-02, UC-11, UC-03, UC-04 | Cadastro da escolinha, aprovação, cadastro de criança e de pedido, em passos |
+
+### Consumo de APIs
+
+| API | Onde | Para quê |
+|---|---|---|
+| API REST do DoaGol (própria) | todas as telas | Busca, perfil, doação, cadastros (`frontend/src/api.js`) |
+| [IBGE Localidades](https://servicodados.ibge.gov.br/api/docs/localidades) | busca | Lista de estados e sugestões de cidade (`frontend/src/externo.js`) |
+| [ViaCEP](https://viacep.com.br) | cadastro de criança | Preenche rua, bairro, cidade e UF a partir do CEP |
+
+As APIs externas são opcionais: se não responderem, os campos continuam funcionando digitados à mão.
+
+### Estrutura
+
+```
+frontend/       código-fonte React (src/) e scripts de build com esbuild
+public/         build do front-end (app.js), estilos, fontes e index.html, servidos pela API em /
+render.yaml     blueprint de hospedagem no Render
+```
+
+### Como rodar tudo localmente
+
+```bash
+npm install
+npm start            # API + front-end em http://localhost:3000
+```
+
+Para alterar o front-end:
+
+```bash
+cd frontend
+npm install
+npm run build        # gera public/app.js (ou npm run dev para recompilar a cada alteração)
+```
+
+O `public/app.js` compilado fica versionado, para o deploy não depender de build do front-end.
+
+### Hospedagem na nuvem (Render)
+
+O arquivo [`render.yaml`](render.yaml) cria um serviço web gratuito que roda `npm ci --omit=dev` e `npm start`,
+verifica a saúde em `/saude` e só publica um commit da `main` depois que a esteira do GitHub Actions passa
+(`autoDeployTrigger: checksPass`). O passo a passo está em [docs/tg3/deploy-render.md](docs/tg3/deploy-render.md).
+
+```
+push na main ──> GitHub Actions (testes + cobertura) ──✓──> Render: npm ci + npm start ──> doagol.onrender.com
+```
+
+No plano gratuito o serviço dorme após 15 minutos sem acesso e leva cerca de um minuto para acordar; como os
+dados ficam em memória, eles voltam aos exemplos a cada reinício.
+
+### Documentação do TG3
+
+- [Kanban](docs/tg3/kanban.md) e [daily](docs/tg3/daily.md) da entrega.
+- [Deploy no Render](docs/tg3/deploy-render.md).
 
 ## Esteira de CI/CD
 
