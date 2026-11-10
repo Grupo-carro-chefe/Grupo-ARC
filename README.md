@@ -192,7 +192,7 @@ verifica a saúde em `/saude` e só publica um commit da `main` depois que a est
 push na main ──> GitHub Actions (testes + cobertura) ──✓──> Render: npm ci + npm start ──> doagol.onrender.com
 ```
 
-No plano gratuito o serviço dorme após 15 minutos sem acesso e leva cerca de um minuto para acordar; como os
+No plano gratuito o serviço dorme após 15 minutos sem acesso e leva até 1 minuto para acordar; como os
 dados ficam em memória, eles voltam aos exemplos a cada reinício.
 
 ### Documentação do TG3
