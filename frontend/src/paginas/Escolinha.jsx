@@ -1,3 +1,4 @@
+import { FundoCampo } from '../componentes/FundoCampo';
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { enderecoPorCep, UFS_PADRAO } from '../externo';
@@ -143,6 +144,7 @@ export function Escolinha({ escolinhas, recarregarEscolinhas }) {
 
   return (
     <section className="pagina painel">
+      <FundoCampo />
       <h1>Área da escolinha</h1>
       <p className="painel__intro">
         Cadastre sua escolinha, as crianças atendidas e o que cada uma precisa para continuar treinando.

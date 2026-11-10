@@ -5,6 +5,7 @@ import { Progresso } from '../componentes/Progresso';
 import { QUASE_LA } from '../componentes/Figurinha';
 import { BarraPedido } from '../componentes/BarraPedido';
 import { gsap, reduzido, contarBloco, zerarBloco, restaurarBloco } from '../movimento';
+import { FundoCampo } from '../componentes/FundoCampo';
 import { Comprovante, FormularioDoacao } from '../componentes/Doacao';
 
 /** Perfil público da criança (UC-07) com a doação (UC-08) e o comprovante (UC-09). */
@@ -89,6 +90,7 @@ export function Perfil({ id, escolinhas }) {
 
   return (
     <section className="pagina perfil" ref={raiz}>
+      <FundoCampo penalti />
       <a className="voltar" href="#/">Voltar para a busca</a>
       <div className="perfil__grade">
         <aside className="perfil__cartao">
