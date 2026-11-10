@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { TIPOS, reais } from '../formatos';
-import { Camisa } from '../componentes/Figurinha';
 import { Progresso } from '../componentes/Progresso';
+import { BarraPedido } from '../componentes/BarraPedido';
 import { Comprovante, FormularioDoacao } from '../componentes/Doacao';
 
 /** Perfil público da criança (UC-07) com a doação (UC-08) e o comprovante (UC-09). */
@@ -11,6 +11,7 @@ export function Perfil({ id, escolinhas }) {
   const [erro, setErro] = useState('');
   const [doando, setDoando] = useState(null);
   const [concluida, setConcluida] = useState(null);
+  const [previa, setPrevia] = useState(0);
 
   async function carregar() {
     try {
@@ -34,21 +35,32 @@ export function Perfil({ id, escolinhas }) {
   if (!crianca) return <p className="pagina carregando">Carregando perfil…</p>;
 
   const escolinha = escolinhas.find((e) => e.id === crianca.escolinhaId);
+  const selecionada = concluida ? concluida.necessidade : doando;
 
   return (
     <section className="pagina perfil">
       <a className="voltar" href="#/">Voltar para a busca</a>
       <div className="perfil__grade">
-        <aside className="figurinha figurinha--perfil">
-          <div className="figurinha__moldura">
-            <Camisa apelido={crianca.apelido} grande />
-            <h1 className="perfil__nome">{crianca.apelido}</h1>
-            <p className="figurinha__meta">{crianca.idade} anos, {crianca.cidade}/{crianca.uf}</p>
-            {escolinha && <p className="figurinha__escolinha">Treina na {escolinha.nome}</p>}
-            <p className="perfil__privacidade">
-              Por segurança, o nome completo e o endereço da criança ficam visíveis só para a escolinha.
-            </p>
-          </div>
+        <aside className="perfil__cartao">
+          <h1 className="perfil__nome">{crianca.apelido}, {crianca.idade} anos</h1>
+          <p className="perfil__meta">{crianca.cidade}/{crianca.uf}</p>
+          {escolinha && <p className="perfil__escolinha">{escolinha.nome}</p>}
+          {selecionada && (
+            <div className="perfil__selecionado">
+              <p className="perfil__item">
+                <span className="etiqueta">{TIPOS[selecionada.tipo]}</span>
+                {selecionada.descricao}
+              </p>
+              <BarraPedido
+                arrecadado={selecionada.valorArrecadado}
+                meta={selecionada.valorEstimado}
+                previa={concluida ? 0 : previa}
+              />
+            </div>
+          )}
+          <p className="perfil__privacidade">
+            Por segurança, o nome completo e o endereço da criança ficam visíveis só para a escolinha.
+          </p>
         </aside>
 
         <div className="perfil__pedidos">
@@ -63,10 +75,13 @@ export function Perfil({ id, escolinhas }) {
             <FormularioDoacao
               necessidade={doando}
               apelido={crianca.apelido}
-              aoCancelar={() => setDoando(null)}
+              aoMudarValor={setPrevia}
+              aoCancelar={() => { setDoando(null); setPrevia(0); }}
               aoConcluir={(comprovante) => {
-                setConcluida({ comprovante, necessidade: doando });
+                const arrecadado = Math.round((doando.valorArrecadado + comprovante.valor) * 100) / 100;
+                setConcluida({ comprovante, necessidade: { ...doando, valorArrecadado: arrecadado } });
                 setDoando(null);
+                setPrevia(0);
                 carregar();
               }}
             />
