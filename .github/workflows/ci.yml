@@ -19,6 +19,25 @@ jobs:
       matrix:
         node: [20, 22]
 
+    # Postgres de verdade para os testes de banco (repositórios, transação e concorrência da doação).
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: doagol
+          POSTGRES_PASSWORD: doagol_teste
+          POSTGRES_DB: doagol_teste
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U doagol -d doagol_teste"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL_TESTE: postgresql://doagol:doagol_teste@localhost:5432/doagol_teste
+
     steps:
       - name: Baixar o código
         uses: actions/checkout@v7
