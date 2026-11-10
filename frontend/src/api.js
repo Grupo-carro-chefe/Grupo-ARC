@@ -19,6 +19,9 @@ async function chamar(caminho, opcoes = {}) {
   return corpo;
 }
 
+// Ids entram no caminho da URL; o de #/crianca/:id vem direto do hash do navegador.
+const seg = (id) => encodeURIComponent(id);
+
 const enviar = (caminho, dados) => chamar(caminho, { method: 'POST', body: JSON.stringify(dados ?? {}) });
 
 export const api = {
@@ -30,12 +33,12 @@ export const api = {
     const consulta = filtros.toString();
     return chamar(`/criancas${consulta ? `?${consulta}` : ''}`);
   },
-  perfil: (id) => chamar(`/criancas/${id}`),
+  perfil: (id) => chamar(`/criancas/${seg(id)}`),
   escolinhas: () => chamar('/escolinhas'),
-  criancasDaEscolinha: (id) => chamar(`/escolinhas/${id}/criancas`),
+  criancasDaEscolinha: (id) => chamar(`/escolinhas/${seg(id)}/criancas`),
   cadastrarEscolinha: (dados) => enviar('/escolinhas', dados),
-  aprovarEscolinha: (id) => enviar(`/escolinhas/${id}/aprovar`),
-  cadastrarCrianca: (escolinhaId, dados) => enviar(`/escolinhas/${escolinhaId}/criancas`, dados),
-  cadastrarNecessidade: (criancaId, dados) => enviar(`/criancas/${criancaId}/necessidades`, dados),
-  doar: (necessidadeId, dados) => enviar(`/necessidades/${necessidadeId}/doacoes`, dados),
+  aprovarEscolinha: (id) => enviar(`/escolinhas/${seg(id)}/aprovar`),
+  cadastrarCrianca: (escolinhaId, dados) => enviar(`/escolinhas/${seg(escolinhaId)}/criancas`, dados),
+  cadastrarNecessidade: (criancaId, dados) => enviar(`/criancas/${seg(criancaId)}/necessidades`, dados),
+  doar: (necessidadeId, dados) => enviar(`/necessidades/${seg(necessidadeId)}/doacoes`, dados),
 };

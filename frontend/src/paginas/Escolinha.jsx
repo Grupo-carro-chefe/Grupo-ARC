@@ -49,7 +49,8 @@ export function Escolinha({ escolinhas, recarregarEscolinhas }) {
 
   // Passo 1: cadastro da escolinha
   const [novaEscolinha, setNovaEscolinha, campoEscolinha] = useFormulario({ nome: '', cidade: '', uf: '' });
-  const [formAberto, setFormAberto] = useState(escolinhas.length === 0);
+  // Começa fechado; com a lista vazia o <details> abre sozinho (ver open= abaixo).
+  const [formAberto, setFormAberto] = useState(false);
   async function cadastrarEscolinha(e) {
     e.preventDefault();
     try {
