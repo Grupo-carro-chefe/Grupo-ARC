@@ -67,7 +67,7 @@ function criarApp({
   const doacaoService = new DoacaoService({ gateway, notificador, doacoes, bloqueio });
 
   // A carga é assíncrona; as rotas esperam por ela, então nenhuma requisição vê dados pela metade.
-  const cargaInicial = dadosExemplo ? carregarDadosExemplo({ escolinhas, criancas, necessidades }) : Promise.resolve();
+  const cargaInicial = dadosExemplo ? carregarDadosExemplo({ escolinhas, criancas, necessidades, doacoes }) : Promise.resolve();
 
   const app = express();
   app.use((req, res, next) => cargaInicial.then(() => next(), next));

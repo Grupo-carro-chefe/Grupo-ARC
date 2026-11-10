@@ -309,9 +309,18 @@ descreverComBanco('PostgreSQL real: carga dos dados de exemplo', () => {
     expect(await semearSeVazio(pool)).toBe(false);
 
     const repos = criarRepositoriosPostgres(pool);
-    expect(await repos.escolinhas.listar()).toHaveLength(5);
-    expect(await repos.criancas.listar()).toHaveLength(6);
-    expect(await repos.necessidades.listar()).toHaveLength(9);
+    expect(await repos.escolinhas.listar()).toHaveLength(12);
+    expect(await repos.criancas.listar()).toHaveLength(24);
+    expect(await repos.necessidades.listar()).toHaveLength(42);
+    expect((await repos.doacoes.listar()).length).toBeGreaterThan(60);
+    expect((await repos.criancas.listar())[0].apelido).toBe('Kauã');
+
+    // A soma das doações grava exatamente o arrecadado de cada necessidade (L8).
+    const { rows } = await pool.query(
+      `SELECT count(*)::int AS divergentes FROM necessidades n
+        WHERE n.valor_arrecadado_centavos <> COALESCE((SELECT sum(valor_centavos) FROM doacoes d WHERE d.necessidade_id = n.id), 0)`,
+    );
+    expect(rows[0].divergentes).toBe(0);
   });
 
   test('duas instâncias subindo juntas semeiam uma vez só', async () => {
@@ -319,7 +328,7 @@ descreverComBanco('PostgreSQL real: carga dos dados de exemplo', () => {
 
     expect(resultados.filter(Boolean)).toHaveLength(1);
     const { rows } = await banco.abrirPool().query('SELECT count(*)::int AS n FROM escolinhas');
-    expect(rows[0].n).toBe(5);
+    expect(rows[0].n).toBe(12);
   });
 
   test('banco que já tem dados não recebe os exemplos', async () => {
@@ -362,7 +371,7 @@ descreverComBanco('PostgreSQL real: inicialização', () => {
     try {
       expect(primeira.semeou).toBe(true);
       expect(segunda.semeou).toBe(false);
-      expect(await segunda.repositorios.escolinhas.listar()).toHaveLength(5);
+      expect(await segunda.repositorios.escolinhas.listar()).toHaveLength(12);
       expect(typeof segunda.bloqueio.executar).toBe('function');
     } finally {
       await primeira.pool.end();

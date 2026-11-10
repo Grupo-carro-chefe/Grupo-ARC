@@ -401,8 +401,8 @@ describe('API REST', () => {
       const busca = await request(appExemplo).get('/criancas');
       const escolinhas = await request(appExemplo).get('/escolinhas');
 
-      expect(busca.body.total).toBe(6);
-      expect(escolinhas.body).toHaveLength(5);
+      expect(busca.body.total).toBe(24);
+      expect(escolinhas.body).toHaveLength(12);
     });
 
     test('com pastaPublica a API serve o front-end em /', async () => {
