@@ -1,6 +1,7 @@
 'use strict';
 
 const { randomUUID } = require('crypto');
+const { RegraNegocioError } = require('./erros');
 
 /**
  * Tipos de necessidade que uma escolinha pode cadastrar para uma criança (RF04).
@@ -29,16 +30,16 @@ function emCentavos(valor) {
 
 function validarValorPositivo(valor, campo) {
   if (typeof valor !== 'number' || !Number.isFinite(valor) || valor <= 0) {
-    throw new Error(`${campo} deve ser um número maior que zero.`);
+    throw new RegraNegocioError(`${campo} deve ser um número maior que zero.`);
   }
   if (Math.abs(valor * 100 - emCentavos(valor)) > 1e-6) {
-    throw new Error(`${campo} deve ter no máximo duas casas decimais.`);
+    throw new RegraNegocioError(`${campo} deve ter no máximo duas casas decimais.`);
   }
 }
 
 function validarDescricao(descricao) {
   if (typeof descricao !== 'string' || descricao.trim().length === 0) {
-    throw new Error('Descrição é obrigatória.');
+    throw new RegraNegocioError('Descrição é obrigatória.');
   }
 }
 
@@ -56,7 +57,7 @@ class Necessidade {
    */
   constructor({ tipo, descricao, valorEstimado, id = randomUUID() } = {}) {
     if (!Object.values(TipoNecessidade).includes(tipo)) {
-      throw new Error(`Tipo de necessidade inválido: ${tipo}.`);
+      throw new RegraNegocioError(`Tipo de necessidade inválido: ${tipo}.`);
     }
     validarDescricao(descricao);
     validarValorPositivo(valorEstimado, 'Valor estimado');
@@ -114,11 +115,11 @@ class Necessidade {
    */
   registrarDoacao(valor) {
     if (!this.estaAberta()) {
-      throw new Error(`Não é possível doar para uma necessidade com status ${this.status}.`);
+      throw new RegraNegocioError(`Não é possível doar para uma necessidade com status ${this.status}.`);
     }
     validarValorPositivo(valor, 'Valor da doação');
     if (emCentavos(valor) > this._estimadoCentavos - this._arrecadadoCentavos) {
-      throw new Error(`Valor da doação excede o restante da meta (R$ ${this.valorRestante().toFixed(2)}).`);
+      throw new RegraNegocioError(`Valor da doação excede o restante da meta (R$ ${this.valorRestante().toFixed(2)}).`);
     }
 
     this._arrecadadoCentavos += emCentavos(valor);
@@ -131,13 +132,13 @@ class Necessidade {
   /** Edita descrição e/ou valor estimado de uma necessidade aberta (RF04). */
   editar({ descricao, valorEstimado } = {}) {
     if (!this.estaAberta()) {
-      throw new Error('Só é possível editar necessidades abertas.');
+      throw new RegraNegocioError('Só é possível editar necessidades abertas.');
     }
     if (descricao !== undefined) validarDescricao(descricao);
     if (valorEstimado !== undefined) {
       validarValorPositivo(valorEstimado, 'Valor estimado');
       if (emCentavos(valorEstimado) < this._arrecadadoCentavos) {
-        throw new Error('Valor estimado não pode ser menor que o valor já arrecadado.');
+        throw new RegraNegocioError('Valor estimado não pode ser menor que o valor já arrecadado.');
       }
     }
 
@@ -153,7 +154,7 @@ class Necessidade {
   /** Encerra manualmente a necessidade; ela deixa de receber doações (RF04). */
   encerrar() {
     if (!this.estaAberta()) {
-      throw new Error(`Necessidade já está ${this.status} e não pode ser encerrada.`);
+      throw new RegraNegocioError(`Necessidade já está ${this.status} e não pode ser encerrada.`);
     }
     this.status = StatusNecessidade.ENCERRADA;
   }

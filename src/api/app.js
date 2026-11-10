@@ -2,6 +2,7 @@
 
 const express = require('express');
 const { Escolinha } = require('../domain/Escolinha');
+const { RegraNegocioError, NaoEncontradoError } = require('../domain/erros');
 const { Necessidade } = require('../domain/Necessidade');
 const { BuscaService } = require('../services/BuscaService');
 const { DoacaoService, PagamentoRecusadoError } = require('../services/DoacaoService');
@@ -10,8 +11,19 @@ const { GatewayPagamentoSimulado } = require('../infra/GatewayPagamentoSimulado'
 const { NotificadorEmMemoria } = require('../infra/NotificadorEmMemoria');
 const { carregarDadosExemplo } = require('../infra/dadosExemplo');
 
-/** Recurso inexistente; vira HTTP 404. */
-class NaoEncontradoError extends Error {}
+/**
+ * Registra uma falha inesperada. Bugs de programação (TypeError e afins) vão inteiros para o log,
+ * que é do servidor; para o resto (erros do pg, de rede...) só a classe e o código, porque a
+ * mensagem pode trazer host, usuário ou SQL.
+ */
+function registrarFalhaInterna(err) {
+  const programacao = err instanceof TypeError || err instanceof RangeError || err instanceof ReferenceError || err instanceof SyntaxError;
+  if (programacao) {
+    console.error(err);
+  } else {
+    console.error('Falha interna na requisição:', { name: err?.name, code: err?.code });
+  }
+}
 
 async function buscarOuFalhar(repositorio, id, mensagem) {
   const item = await repositorio.buscarPorId(id);
@@ -177,11 +189,12 @@ function criarApp({
     if (Number.isInteger(status) && status >= 400 && status < 500) {
       return res.status(status).json({ erro: status === 413 ? 'Corpo da requisição grande demais.' : 'Requisição inválida.' });
     }
-    // Regras de negócio do domínio lançam Error simples; TypeError e afins são falhas internas.
-    if (err.constructor === Error) {
+    // Só a violação de regra de negócio tem mensagem própria para o usuário. Qualquer outro erro
+    // (banco, rede, bug) é falha interna: a resposta é genérica e a mensagem bruta não é exposta.
+    if (err instanceof RegraNegocioError) {
       return res.status(400).json({ erro: err.message });
     }
-    console.error(err);
+    registrarFalhaInterna(err);
     return res.status(500).json({ erro: 'Erro interno.' });
   });
 

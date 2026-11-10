@@ -3,6 +3,7 @@
 const { linhaParaNecessidade, doacaoParaLinha } = require('./mapeadores');
 const { emCentavos } = require('../../domain/validacoes');
 const { reverter } = require('./conexao');
+const { NaoEncontradoError } = require('../../domain/erros');
 
 /**
  * Serializa as doações de uma mesma necessidade com uma transação e `SELECT ... FOR UPDATE` na
@@ -22,11 +23,12 @@ class BloqueioPostgres {
    */
   async executar({ id }, trabalho) {
     const cliente = await this.pool.connect();
+    let falha;
     try {
       await cliente.query('BEGIN');
       const { rows } = await cliente.query('SELECT * FROM necessidades WHERE id = $1 FOR UPDATE', [id]);
       if (rows.length === 0) {
-        throw new Error('Necessidade não encontrada.');
+        throw new NaoEncontradoError('Necessidade não encontrada.');
       }
       const atual = linhaParaNecessidade(rows[0]);
       const resultado = await trabalho(atual, {
@@ -49,10 +51,13 @@ class BloqueioPostgres {
       await cliente.query('COMMIT');
       return resultado;
     } catch (erro) {
+      falha = erro;
       await reverter(cliente);
       throw erro;
     } finally {
-      cliente.release();
+      // Com erro, release(erro) destrói a conexão em vez de devolvê-la ao pool: ela pode estar
+      // quebrada ou com transação aberta, e ninguém mais deve recebê-la.
+      cliente.release(falha);
     }
   }
 }

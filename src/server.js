@@ -2,6 +2,7 @@
 
 const path = require('path');
 const { criarApp } = require('./api/app');
+const { tentarComEspera } = require('./infra/tentarComEspera');
 
 const porta = Number(process.env.PORT) || 3000;
 // Os exemplos garantem que a demonstração nunca comece vazia.
@@ -15,7 +16,11 @@ async function iniciar() {
     // Com banco: aplica as migrations e só semeia os exemplos se ele estiver vazio.
     // Nunca imprima a DATABASE_URL (tem a senha): só o que aconteceu.
     const { iniciarPostgres } = require('./infra/postgres');
-    const pg = await iniciarPostgres(process.env.DATABASE_URL, { semear: dadosExemplo });
+    // O Neon escala a zero e pode levar alguns segundos para acordar (cold start no Render):
+    // tenta de novo (1 s, 2 s, 4 s) antes de desistir. O servidor só começa a escutar depois.
+    const pg = await tentarComEspera(() => iniciarPostgres(process.env.DATABASE_URL, { semear: dadosExemplo }), {
+      aoFalhar: ({ tentativa, de, motivo }) => console.error(`Banco indisponível (${motivo}); tentativa ${tentativa} de ${de}.`),
+    });
     pool = pg.pool;
     opcoes.repositorios = pg.repositorios;
     opcoes.bloqueio = pg.bloqueio;

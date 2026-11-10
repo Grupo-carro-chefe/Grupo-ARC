@@ -2,6 +2,7 @@
 
 const { TipoNecessidade } = require('../domain/Necessidade');
 const { normalizar } = require('../domain/validacoes');
+const { RegraNegocioError } = require('../domain/erros');
 
 /** Busca de crianças com necessidades abertas por cidade, UF e tipo (UC-06, RF05, RF06). */
 class BuscaService {
@@ -17,7 +18,7 @@ class BuscaService {
    */
   async buscar({ cidade, uf, tipo } = {}) {
     if (tipo && !Object.values(TipoNecessidade).includes(tipo)) {
-      throw new Error(`Tipo de necessidade inválido: ${tipo}.`);
+      throw new RegraNegocioError(`Tipo de necessidade inválido: ${tipo}.`);
     }
     const candidatas = await this.criancas.listar({ cidade, uf, tipo, comNecessidadeAberta: true });
     return candidatas

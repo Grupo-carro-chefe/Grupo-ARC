@@ -22,6 +22,7 @@ async function rodarMigrations(pool, pasta = PASTA_PADRAO) {
   for (const nome of arquivos) {
     const sql = fs.readFileSync(path.join(pasta, nome), 'utf8');
     const cliente = await pool.connect();
+    let falha;
     try {
       await cliente.query('BEGIN');
       await cliente.query('SELECT pg_advisory_xact_lock($1)', [TRAVA_MIGRATIONS]);
@@ -40,10 +41,11 @@ async function rodarMigrations(pool, pasta = PASTA_PADRAO) {
       }
       await cliente.query('COMMIT');
     } catch (erro) {
+      falha = erro;
       await reverter(cliente);
       throw erro;
     } finally {
-      cliente.release();
+      cliente.release(falha);
     }
   }
   return aplicadas;

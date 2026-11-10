@@ -29,6 +29,14 @@ class BloqueioEmMemoria {
       });
     const atual = (this._filas.get(necessidade.id) ?? Promise.resolve()).then(executar, executar);
     this._filas.set(necessidade.id, atual);
+    // Quando a última tarefa da fila termina, a entrada sai do mapa (sem isto ele cresceria para
+    // sempre). Se já entrou outra tarefa depois desta, a entrada é dela e fica.
+    const limpar = () => {
+      if (this._filas.get(necessidade.id) === atual) {
+        this._filas.delete(necessidade.id);
+      }
+    };
+    atual.then(limpar, limpar);
     return atual;
   }
 }

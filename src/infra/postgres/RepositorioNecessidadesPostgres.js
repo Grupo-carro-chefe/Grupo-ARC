@@ -1,11 +1,10 @@
 'use strict';
 
 const { idValido, linhaParaNecessidade } = require('./mapeadores');
-const { emCentavos } = require('../../domain/validacoes');
 
 /**
  * Necessidades no PostgreSQL. A necessidade nasce junto da criança (`RepositorioCriancasPostgres.salvar`,
- * que guarda a chave estrangeira); aqui `salvar` só atualiza uma que já existe.
+ * que guarda a chave estrangeira); aqui `salvar` só atualiza uma que já existe (descrição e encerramento, nunca o dinheiro).
  * Para doar, não use buscarPorId + salvar: a doação passa por `BloqueioPostgres`, que trava a linha.
  */
 class RepositorioNecessidadesPostgres {
@@ -13,18 +12,19 @@ class RepositorioNecessidadesPostgres {
     this.db = db;
   }
 
+  /**
+   * Atualiza só o que é editável (a descrição) e a passagem para ENCERRADA, que só vale se a
+   * necessidade ainda está ABERTA no banco. Nunca grava `valor_arrecadado_centavos` nem volta o
+   * status: uma cópia velha em memória apagaria doações. O único caminho que mexe em dinheiro e
+   * em ATENDIDA é o `BloqueioPostgres`.
+   */
   async salvar(necessidade) {
     const { rowCount } = await this.db.query(
       `UPDATE necessidades
-          SET descricao = $2, valor_estimado_centavos = $3, valor_arrecadado_centavos = $4, status = $5
+          SET descricao = $2,
+              status = CASE WHEN $3 = 'ENCERRADA' AND status = 'ABERTA' THEN 'ENCERRADA' ELSE status END
         WHERE id = $1`,
-      [
-        necessidade.id,
-        necessidade.descricao,
-        emCentavos(necessidade.valorEstimado),
-        emCentavos(necessidade.valorArrecadado),
-        necessidade.status,
-      ],
+      [necessidade.id, necessidade.descricao, necessidade.status],
     );
     if (rowCount === 0) {
       throw new Error('Necessidade não vinculada a uma criança: salve a criança antes.');

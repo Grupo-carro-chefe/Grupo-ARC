@@ -2,6 +2,7 @@
 
 const { Doacao } = require('../domain/Doacao');
 const { emCentavos } = require('../domain/validacoes');
+const { RegraNegocioError } = require('../domain/erros');
 const { BloqueioEmMemoria } = require('../infra/BloqueioEmMemoria');
 
 /** Pagamento recusado pelo gateway (UC-08, fluxo A1): nada é registrado. */
@@ -57,10 +58,10 @@ class DoacaoService {
         // arredondado em centavos, para que o valor cobrado seja o mesmo valor registrado.
         const { valor: valorValidado } = new Doacao(dados);
         if (!atual.estaAberta()) {
-          throw new Error(`Não é possível doar para uma necessidade com status ${atual.status}.`);
+          throw new RegraNegocioError(`Não é possível doar para uma necessidade com status ${atual.status}.`);
         }
         if (emCentavos(valorValidado) > emCentavos(atual.valorRestante())) {
-          throw new Error(`Valor da doação excede o restante da meta (R$ ${atual.valorRestante().toFixed(2)}).`);
+          throw new RegraNegocioError(`Valor da doação excede o restante da meta (R$ ${atual.valorRestante().toFixed(2)}).`);
         }
 
         // 2. Cobrança. Recusada: nada é gravado nem notificado (A1).

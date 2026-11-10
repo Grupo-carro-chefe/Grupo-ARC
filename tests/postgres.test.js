@@ -44,7 +44,7 @@ descreverComBanco('PostgreSQL real: migrations e repositórios', () => {
   describe('migrations', () => {
     test('aplicam o esquema, registram o nome e não repetem na segunda execução', async () => {
       const { rows } = await pool.query('SELECT nome FROM schema_migrations');
-      expect(rows.map((r) => r.nome)).toEqual(['001_inicial.sql']);
+      expect(rows.map((r) => r.nome)).toEqual(['001_inicial.sql', '002_status_coerente.sql']);
 
       expect(await rodarMigrations(pool)).toEqual([]);
     });
@@ -56,7 +56,7 @@ descreverComBanco('PostgreSQL real: migrations e repositórios', () => {
 
         const aplicadas = await Promise.all(poolsNovos.map((p) => rodarMigrations(p)));
 
-        expect(aplicadas.flat()).toEqual(['001_inicial.sql']);
+        expect(aplicadas.flat()).toEqual(['001_inicial.sql', '002_status_coerente.sql']);
       } finally {
         await outro.encerrar();
       }
@@ -85,7 +85,7 @@ descreverComBanco('PostgreSQL real: migrations e repositórios', () => {
       const { crianca } = await criarCrianca();
       const { id } = crianca.necessidades[0];
 
-      await expect(pool.query('UPDATE necessidades SET valor_arrecadado_centavos = 999999 WHERE id = $1', [id])).rejects.toThrow(/necessidades_nao_excede_meta/);
+      await expect(pool.query(`UPDATE necessidades SET status = 'ENCERRADA', valor_arrecadado_centavos = 999999 WHERE id = $1`, [id])).rejects.toThrow(/necessidades_nao_excede_meta/);
     });
 
     test('chaves estrangeiras impedem criança sem escolinha e doação sem necessidade', async () => {
@@ -163,8 +163,7 @@ descreverComBanco('PostgreSQL real: migrations e repositórios', () => {
       const { crianca } = await criarCrianca();
       const velha = await repos.criancas.buscarPorId(crianca.id);
       const atual = (await repos.necessidades.buscarPorId(crianca.necessidades[0].id));
-      atual.registrarDoacao(40);
-      await repos.necessidades.salvar(atual);
+      await pool.query('UPDATE necessidades SET valor_arrecadado_centavos = 4000 WHERE id = $1', [atual.id]);
 
       await repos.criancas.salvar(velha);
 
@@ -180,20 +179,48 @@ descreverComBanco('PostgreSQL real: migrations e repositórios', () => {
       expect(await repos.criancas.buscarPorId('lixo')).toBeNull();
     });
 
-    test('necessidades.salvar atualiza arrecadado e status; sem criança salva, falha', async () => {
+    test('necessidades.salvar muda só a descrição: nunca sobrescreve arrecadado nem status (L2)', async () => {
       const { crianca } = await criarCrianca({ necessidades: [novaNecessidade({ valorEstimado: 50 })] });
-      const n = await repos.necessidades.buscarPorId(crianca.necessidades[0].id);
-      n.registrarDoacao(50);
-      await repos.necessidades.salvar(n);
+      const velha = await repos.necessidades.buscarPorId(crianca.necessidades[0].id);
+      await pool.query(`UPDATE necessidades SET valor_arrecadado_centavos = 5000, status = 'ATENDIDA' WHERE id = $1`, [velha.id]);
 
-      const lida = await repos.necessidades.buscarPorId(n.id);
-      expect(lida.status).toBe(StatusNecessidade.ATENDIDA);
+      velha.descricao = 'Chuteira nº 35';
+      await repos.necessidades.salvar(velha);
+
+      const lida = await repos.necessidades.buscarPorId(velha.id);
+      expect(lida.descricao).toBe('Chuteira nº 35');
       expect(lida.valorArrecadado).toBe(50);
-      expect((await repos.necessidades.listar()).map((x) => x.id)).toContain(n.id);
+      expect(lida.status).toBe(StatusNecessidade.ATENDIDA);
+      expect((await repos.necessidades.listar()).map((x) => x.id)).toContain(velha.id);
       expect(await repos.necessidades.buscarPorId('lixo')).toBeNull();
       expect(await repos.necessidades.buscarPorId(ID_INEXISTENTE)).toBeNull();
 
       await expect(repos.necessidades.salvar(novaNecessidade())).rejects.toThrow('Necessidade não vinculada a uma criança');
+    });
+
+    test('encerrar só vale se ainda está ABERTA no banco; uma já atendida não é encerrada por cópia velha', async () => {
+      const { crianca } = await criarCrianca({ necessidades: [novaNecessidade({ valorEstimado: 50 }), novaNecessidade({ valorEstimado: 50 })] });
+      const [aberta, atendida] = await Promise.all(crianca.necessidades.map((n) => repos.necessidades.buscarPorId(n.id)));
+      await pool.query(`UPDATE necessidades SET valor_arrecadado_centavos = 5000, status = 'ATENDIDA' WHERE id = $1`, [atendida.id]);
+
+      aberta.encerrar();
+      atendida.encerrar();
+      await repos.necessidades.salvar(aberta);
+      await repos.necessidades.salvar(atendida);
+
+      expect((await repos.necessidades.buscarPorId(aberta.id)).status).toBe(StatusNecessidade.ENCERRADA);
+      expect((await repos.necessidades.buscarPorId(atendida.id)).status).toBe(StatusNecessidade.ATENDIDA);
+    });
+
+    test('o banco recusa status incoerente com o arrecadado (L3)', async () => {
+      const { crianca } = await criarCrianca({ necessidades: [novaNecessidade({ valorEstimado: 50 })] });
+      const id = crianca.necessidades[0].id;
+
+      await expect(pool.query(`UPDATE necessidades SET status = 'ATENDIDA' WHERE id = $1`, [id])).rejects.toThrow(/necessidades_atendida_completa/);
+      await expect(pool.query('UPDATE necessidades SET valor_arrecadado_centavos = 5000 WHERE id = $1', [id])).rejects.toThrow(/necessidades_aberta_incompleta/);
+      // ENCERRADA aceita qualquer valor arrecadado, e a atendida completa é válida.
+      await pool.query(`UPDATE necessidades SET status = 'ENCERRADA', valor_arrecadado_centavos = 1000 WHERE id = $1`, [id]);
+      await pool.query(`UPDATE necessidades SET status = 'ATENDIDA', valor_arrecadado_centavos = 5000 WHERE id = $1`, [id]);
     });
   });
 

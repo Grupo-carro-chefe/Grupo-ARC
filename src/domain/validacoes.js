@@ -1,5 +1,7 @@
 'use strict';
 
+const { RegraNegocioError } = require('./erros');
+
 /** Siglas das 27 unidades federativas, usadas nos endereços e na busca (RF03, RF05). */
 const UFS = Object.freeze([
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA',
@@ -9,7 +11,7 @@ const UFS = Object.freeze([
 /** Exige um texto não vazio e devolve o texto sem espaços nas pontas. */
 function textoObrigatorio(valor, campo) {
   if (typeof valor !== 'string' || valor.trim().length === 0) {
-    throw new Error(`${campo} é obrigatório.`);
+    throw new RegraNegocioError(`${campo} é obrigatório.`);
   }
   return valor.trim();
 }
@@ -18,7 +20,7 @@ function textoObrigatorio(valor, campo) {
 function ufValida(valor) {
   const uf = typeof valor === 'string' ? valor.trim().toUpperCase() : valor;
   if (!UFS.includes(uf)) {
-    throw new Error(`UF inválida: ${valor}.`);
+    throw new RegraNegocioError(`UF inválida: ${valor}.`);
   }
   return uf;
 }

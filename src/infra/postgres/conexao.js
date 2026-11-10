@@ -58,16 +58,19 @@ async function comTransacao(db, fn) {
     return fn(db);
   }
   const cliente = await db.connect();
+  let falha;
   try {
     await cliente.query('BEGIN');
     const resultado = await fn(cliente);
     await cliente.query('COMMIT');
     return resultado;
   } catch (erro) {
+    falha = erro;
     await reverter(cliente);
     throw erro;
   } finally {
-    cliente.release();
+    // Com erro, release(erro) destrói a conexão em vez de devolvê-la ao pool.
+    cliente.release(falha);
   }
 }
 
