@@ -1,0 +1,17 @@
+{
+  "name": "doagol-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Front-end React do DoaGol. O build vai para ../public, que a API serve em /.",
+  "scripts": {
+    "build": "esbuild src/main.jsx --bundle --minify --jsx=automatic --target=es2020 --outfile=../public/app.js",
+    "dev": "esbuild src/main.jsx --bundle --jsx=automatic --target=es2020 --outfile=../public/app.js --watch"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
