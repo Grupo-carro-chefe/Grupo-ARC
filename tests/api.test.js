@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const request = require('supertest');
 const { criarApp } = require('../src/api/app');
 const { GatewayPagamentoSimulado } = require('../src/infra/GatewayPagamentoSimulado');
@@ -343,6 +346,83 @@ describe('API REST', () => {
       expect(res.body).toEqual({ erro: 'Erro interno.' });
       expect(log).toHaveBeenCalledWith(expect.any(TypeError));
       log.mockRestore();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Integração com o front-end (TG3)
+  // ---------------------------------------------------------------------
+  describe('integração com o front-end (TG3)', () => {
+    test('respostas trazem o cabeçalho CORS', async () => {
+      const res = await request(app).get('/saude');
+
+      expect(res.headers['access-control-allow-origin']).toBe('*');
+    });
+
+    test('pré-requisição OPTIONS responde 204 com os métodos permitidos', async () => {
+      const res = await request(app).options('/escolinhas');
+
+      expect(res.status).toBe(204);
+      expect(res.headers['access-control-allow-methods']).toBe('GET, POST, OPTIONS');
+      expect(res.headers['access-control-allow-headers']).toBe('Content-Type');
+    });
+
+    test('GET /escolinhas lista as escolinhas cadastradas', async () => {
+      await request(app).post('/escolinhas').send({ nome: 'Bola Pra Frente', cidade: 'Recife', uf: 'PE' });
+      const res = await request(app).get('/escolinhas');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0]).toMatchObject({ nome: 'Bola Pra Frente', status: 'PENDENTE' });
+    });
+
+    test('GET /escolinhas/:id/criancas lista só as crianças da escolinha, sem dados sensíveis', async () => {
+      const { escolinha, crianca } = await prepararNecessidade(app);
+      const outra = (await request(app).post('/escolinhas').send({ nome: 'Outra', cidade: 'Recife', uf: 'PE' })).body;
+
+      const res = await request(app).get(`/escolinhas/${escolinha.id}/criancas`);
+      const vazia = await request(app).get(`/escolinhas/${outra.id}/criancas`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.map((c) => c.id)).toEqual([crianca.id]);
+      expect(vazia.body).toEqual([]);
+      semDadosSensiveis(res);
+    });
+
+    test('GET /escolinhas/:id/criancas de escolinha inexistente responde 404', async () => {
+      const res = await request(app).get(`/escolinhas/${ID_INEXISTENTE}/criancas`);
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ erro: 'Escolinha não encontrada.' });
+    });
+
+    test('com dadosExemplo a busca já começa com crianças cadastradas', async () => {
+      const appExemplo = criarApp({ dadosExemplo: true });
+      const busca = await request(appExemplo).get('/criancas');
+      const escolinhas = await request(appExemplo).get('/escolinhas');
+
+      expect(busca.body.total).toBe(6);
+      expect(escolinhas.body).toHaveLength(5);
+    });
+
+    test('com pastaPublica a API serve o front-end em /', async () => {
+      const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'doagol-front-'));
+      fs.writeFileSync(path.join(pasta, 'index.html'), '<!doctype html><title>DoaGol</title>');
+      const appComFront = criarApp({ pastaPublica: pasta });
+
+      const pagina = await request(appComFront).get('/');
+      const api = await request(appComFront).get('/saude');
+
+      expect(pagina.status).toBe(200);
+      expect(pagina.text).toContain('<title>DoaGol</title>');
+      expect(api.body).toEqual({ status: 'ok' });
+      fs.rmSync(pasta, { recursive: true, force: true });
+    });
+
+    test('sem pastaPublica, / não serve arquivos (404)', async () => {
+      const res = await request(app).get('/');
+
+      expect(res.status).toBe(404);
     });
   });
 });
