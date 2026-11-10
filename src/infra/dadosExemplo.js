@@ -83,41 +83,47 @@ const EXEMPLOS = [
 const ESCOLINHA_PENDENTE = { nome: 'Futebol na Comunidade', cidade: 'Salvador', uf: 'BA' };
 
 /**
- * Preenche os repositórios em memória com os exemplos acima, passando pelas mesmas regras de
- * domínio do cadastro real (escolinha aprovada, criança menor de 18, meta válida).
+ * Preenche os repositórios com os exemplos acima, passando pelas mesmas regras de domínio do
+ * cadastro real (escolinha aprovada, criança menor de 18, meta válida). Cada objeto é montado
+ * por completo antes de ser salvo, como exige o repositório PostgreSQL.
  *
- * @returns {{escolinhas: number, criancas: number, necessidades: number}} quantidades criadas
+ * @returns {Promise<{escolinhas: number, criancas: number, necessidades: number}>} quantidades criadas
  */
-function carregarDadosExemplo({ escolinhas, criancas, necessidades }, hoje = new Date()) {
+async function carregarDadosExemplo({ escolinhas, criancas, necessidades }, hoje = new Date()) {
   const total = { escolinhas: 0, criancas: 0, necessidades: 0 };
 
   for (const exemplo of EXEMPLOS) {
-    const escolinha = escolinhas.salvar(new Escolinha(exemplo.escolinha));
+    const escolinha = new Escolinha(exemplo.escolinha);
     escolinha.aprovar();
+    await escolinhas.salvar(escolinha);
     total.escolinhas += 1;
 
     for (const dados of exemplo.criancas) {
-      const crianca = criancas.salvar(escolinha.cadastrarCrianca({
+      const crianca = escolinha.cadastrarCrianca({
         nomeCivil: dados.nomeCivil,
         dataNascimento: nascimentoComIdade(dados.idade, hoje),
         apelido: dados.apelido,
         endereco: { logradouro: 'Rua Exemplo', numero: '100', bairro: dados.bairro, cidade: escolinha.cidade, uf: escolinha.uf },
-      }));
-      total.criancas += 1;
-
+      });
+      const novas = [];
       for (const { jaArrecadado, ...dadosNecessidade } of dados.necessidades) {
         const necessidade = new Necessidade(dadosNecessidade);
         if (jaArrecadado) {
           necessidade.registrarDoacao(jaArrecadado);
         }
         crianca.adicionarNecessidade(necessidade);
-        necessidades.salvar(necessidade);
+        novas.push(necessidade);
+      }
+      await criancas.salvar(crianca);
+      total.criancas += 1;
+      for (const necessidade of novas) {
+        await necessidades.salvar(necessidade);
         total.necessidades += 1;
       }
     }
   }
 
-  escolinhas.salvar(new Escolinha(ESCOLINHA_PENDENTE));
+  await escolinhas.salvar(new Escolinha(ESCOLINHA_PENDENTE));
   total.escolinhas += 1;
 
   return total;

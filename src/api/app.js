@@ -5,7 +5,7 @@ const { Escolinha } = require('../domain/Escolinha');
 const { Necessidade } = require('../domain/Necessidade');
 const { BuscaService } = require('../services/BuscaService');
 const { DoacaoService, PagamentoRecusadoError } = require('../services/DoacaoService');
-const { RepositorioEmMemoria } = require('../infra/RepositorioEmMemoria');
+const { RepositorioEmMemoria, RepositorioCriancasEmMemoria } = require('../infra/RepositorioEmMemoria');
 const { GatewayPagamentoSimulado } = require('../infra/GatewayPagamentoSimulado');
 const { NotificadorEmMemoria } = require('../infra/NotificadorEmMemoria');
 const { carregarDadosExemplo } = require('../infra/dadosExemplo');
@@ -13,8 +13,8 @@ const { carregarDadosExemplo } = require('../infra/dadosExemplo');
 /** Recurso inexistente; vira HTTP 404. */
 class NaoEncontradoError extends Error {}
 
-function buscarOuFalhar(repositorio, id, mensagem) {
-  const item = repositorio.buscarPorId(id);
+async function buscarOuFalhar(repositorio, id, mensagem) {
+  const item = await repositorio.buscarPorId(id);
   if (!item) {
     throw new NaoEncontradoError(mensagem);
   }
@@ -32,25 +32,33 @@ function buscarOuFalhar(repositorio, id, mensagem) {
  * @param {object} [opcoes]
  * @param {boolean} [opcoes.dadosExemplo]  carrega escolinhas, crianças e necessidades fictícias
  * @param {string|null} [opcoes.pastaPublica]  pasta do front-end (build do React) servida em '/'
+ * @param {object} [opcoes.repositorios]  { escolinhas, criancas, necessidades, doacoes }; sem informar,
+ *   usa repositórios em memória. Com PostgreSQL, vêm de `criarRepositoriosPostgres`. Todos são usados
+ *   com `await`.
+ * @param {object} [opcoes.bloqueio]  trava das doações por necessidade (ver `DoacaoService`)
  */
 function criarApp({
   gateway = new GatewayPagamentoSimulado(),
   notificador = new NotificadorEmMemoria(),
   dadosExemplo = false,
   pastaPublica = null,
+  repositorios = {},
+  bloqueio,
 } = {}) {
-  const escolinhas = new RepositorioEmMemoria();
-  const criancas = new RepositorioEmMemoria();
-  const necessidades = new RepositorioEmMemoria();
-  const doacoes = new RepositorioEmMemoria();
+  const {
+    escolinhas = new RepositorioEmMemoria(),
+    criancas = new RepositorioCriancasEmMemoria(),
+    necessidades = new RepositorioEmMemoria(),
+    doacoes = new RepositorioEmMemoria(),
+  } = repositorios;
   const busca = new BuscaService({ criancas });
-  const doacaoService = new DoacaoService({ gateway, notificador, doacoes });
+  const doacaoService = new DoacaoService({ gateway, notificador, doacoes, bloqueio });
 
-  if (dadosExemplo) {
-    carregarDadosExemplo({ escolinhas, criancas, necessidades });
-  }
+  // A carga é assíncrona; as rotas esperam por ela, então nenhuma requisição vê dados pela metade.
+  const cargaInicial = dadosExemplo ? carregarDadosExemplo({ escolinhas, criancas, necessidades }) : Promise.resolve();
 
   const app = express();
+  app.use((req, res, next) => cargaInicial.then(() => next(), next));
 
   // CORS: permite que o front-end hospedado em outro endereço (ex.: GitHub Pages) chame a API.
   app.use((req, res, next) => {
@@ -70,52 +78,55 @@ function criarApp({
   });
 
   // UC-02: cadastro da escolinha, que nasce PENDENTE.
-  app.post('/escolinhas', (req, res) => {
+  app.post('/escolinhas', async (req, res) => {
     const { nome, cidade, uf } = req.body ?? {};
-    const escolinha = escolinhas.salvar(new Escolinha({ nome, cidade, uf }));
+    const escolinha = await escolinhas.salvar(new Escolinha({ nome, cidade, uf }));
     res.status(201).json(escolinha);
   });
 
   // Lista de escolinhas, usada pelo front-end no perfil da criança e no painel da escolinha.
-  app.get('/escolinhas', (req, res) => {
-    res.json(escolinhas.listar());
+  app.get('/escolinhas', async (req, res) => {
+    res.json(await escolinhas.listar());
   });
 
   // UC-10 (parcial): crianças de uma escolinha, só com o perfil público.
-  app.get('/escolinhas/:id/criancas', (req, res) => {
-    const escolinha = buscarOuFalhar(escolinhas, req.params.id, 'Escolinha não encontrada.');
-    res.json(criancas.listar().filter((c) => c.escolinhaId === escolinha.id).map((c) => c.perfilPublico()));
+  app.get('/escolinhas/:id/criancas', async (req, res) => {
+    const escolinha = await buscarOuFalhar(escolinhas, req.params.id, 'Escolinha não encontrada.');
+    const doEscolinha = await criancas.listar({ escolinhaId: escolinha.id });
+    res.json(doEscolinha.filter((c) => c.escolinhaId === escolinha.id).map((c) => c.perfilPublico()));
   });
 
   // UC-11: aprovação do cadastro (rota aberta até existir o papel de administrador).
-  app.post('/escolinhas/:id/aprovar', (req, res) => {
-    const escolinha = buscarOuFalhar(escolinhas, req.params.id, 'Escolinha não encontrada.');
+  app.post('/escolinhas/:id/aprovar', async (req, res) => {
+    const escolinha = await buscarOuFalhar(escolinhas, req.params.id, 'Escolinha não encontrada.');
     escolinha.aprovar();
+    await escolinhas.salvar(escolinha);
     res.json(escolinha);
   });
 
   // UC-03: cadastro de criança. A resposta usa toJSON (perfil público), nunca os dados restritos.
-  app.post('/escolinhas/:id/criancas', (req, res) => {
-    const escolinha = buscarOuFalhar(escolinhas, req.params.id, 'Escolinha não encontrada.');
+  app.post('/escolinhas/:id/criancas', async (req, res) => {
+    const escolinha = await buscarOuFalhar(escolinhas, req.params.id, 'Escolinha não encontrada.');
     const { nomeCivil, dataNascimento, endereco, apelido } = req.body ?? {};
-    const crianca = criancas.salvar(escolinha.cadastrarCrianca({ nomeCivil, dataNascimento, endereco, apelido }));
+    const crianca = await criancas.salvar(escolinha.cadastrarCrianca({ nomeCivil, dataNascimento, endereco, apelido }));
     res.status(201).json(crianca);
   });
 
   // UC-04: cadastro de necessidade da criança.
-  app.post('/criancas/:id/necessidades', (req, res) => {
-    const crianca = buscarOuFalhar(criancas, req.params.id, 'Criança não encontrada.');
+  app.post('/criancas/:id/necessidades', async (req, res) => {
+    const crianca = await buscarOuFalhar(criancas, req.params.id, 'Criança não encontrada.');
     const { tipo, descricao, valorEstimado } = req.body ?? {};
     const necessidade = new Necessidade({ tipo, descricao, valorEstimado });
     crianca.adicionarNecessidade(necessidade);
-    necessidades.salvar(necessidade);
+    await criancas.salvar(crianca);
+    await necessidades.salvar(necessidade);
     res.status(201).json(crianca);
   });
 
   // UC-06: busca por cidade, UF e tipo de necessidade.
-  app.get('/criancas', (req, res) => {
+  app.get('/criancas', async (req, res) => {
     const { cidade, uf, tipo } = req.query;
-    const resultados = busca.buscar({ cidade, uf, tipo });
+    const resultados = await busca.buscar({ cidade, uf, tipo });
     const corpo = { total: resultados.length, resultados };
     if (resultados.length === 0) {
       corpo.mensagem = 'Nenhuma criança encontrada. Tente remover algum filtro.';
@@ -124,16 +135,15 @@ function criarApp({
   });
 
   // UC-07: perfil público da criança.
-  app.get('/criancas/:id', (req, res) => {
-    const crianca = buscarOuFalhar(criancas, req.params.id, 'Criança não encontrada.');
+  app.get('/criancas/:id', async (req, res) => {
+    const crianca = await buscarOuFalhar(criancas, req.params.id, 'Criança não encontrada.');
     res.json(crianca.perfilPublico());
   });
 
   // UC-08 e UC-09: doação e comprovante.
   app.post('/necessidades/:id/doacoes', async (req, res) => {
-    const necessidade = buscarOuFalhar(necessidades, req.params.id, 'Necessidade não encontrada.');
-    // ponytail: varre as crianças para achar a dona; trocar por chave estrangeira no PostgreSQL.
-    const dona = criancas.listar().find((c) => c.necessidades.includes(necessidade));
+    const necessidade = await buscarOuFalhar(necessidades, req.params.id, 'Necessidade não encontrada.');
+    const dona = await criancas.buscarPorNecessidadeId(necessidade.id);
     const { doadorId, valor, formaPagamento, anonima } = req.body ?? {};
     const comprovante = await doacaoService.realizar({
       necessidade,

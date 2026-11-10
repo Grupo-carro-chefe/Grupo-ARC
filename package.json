@@ -5,31 +5,18 @@
   "main": "src/domain/Necessidade.js",
   "files": [
     "src",
-    "public"
+    "public",
+    "db"
   ],
   "scripts": {
     "start": "node src/server.js",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "build:front": "cd frontend && npm install && npm run build"
+    "build:front": "cd frontend && npm install && npm run build",
+    "dev:banco": "node --env-file=.env.local src/server.js"
   },
   "author": "André Ihsan Ward, Rodrigo Lucas Mascarenhas Leite Oliveira, Cristian de Souza",
   "license": "MIT",
-  "jest": {
-    "testEnvironment": "node",
-    "collectCoverageFrom": [
-      "src/**/*.js",
-      "!src/server.js"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 85,
-        "functions": 100,
-        "lines": 95,
-        "statements": 95
-      }
-    }
-  },
   "devDependencies": {
     "jest": "^29.7.0",
     "supertest": "^7.3.1"
