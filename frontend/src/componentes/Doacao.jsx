@@ -21,6 +21,10 @@ export function FormularioDoacao({ necessidade, apelido, aoConcluir, aoCancelar 
       setErro('Informe um valor maior que zero.');
       return;
     }
+    if (!doador.trim()) {
+      setErro('Informe seu nome ou e-mail para receber o comprovante.');
+      return;
+    }
     setErro('');
     setEnviando(true);
     try {
@@ -39,7 +43,7 @@ export function FormularioDoacao({ necessidade, apelido, aoConcluir, aoCancelar 
   }
 
   return (
-    <form className="doacao" onSubmit={confirmar} noValidate>
+    <form className="doacao" onSubmit={confirmar} onChange={() => setErro('')} noValidate>
       <h3 className="doacao__titulo">Doar para {apelido}</h3>
       <p className="doacao__alvo">
         {necessidade.descricao} <span className="etiqueta">{TIPOS[necessidade.tipo]}</span>
@@ -50,11 +54,11 @@ export function FormularioDoacao({ necessidade, apelido, aoConcluir, aoCancelar 
         <legend>Valor</legend>
         <div className="sugestoes">
           {SUGESTOES.filter((s) => s < restante).map((s) => (
-            <button type="button" key={s} className="chip" aria-pressed={lerValor(valor) === s} onClick={() => setValor(String(s))}>
+            <button type="button" key={s} className="chip" aria-pressed={lerValor(valor) === s} onClick={() => { setValor(String(s)); setErro(''); }}>
               {reais(s)}
             </button>
           ))}
-          <button type="button" className="chip" aria-pressed={lerValor(valor) === restante} onClick={() => setValor(String(restante).replace('.', ','))}>
+          <button type="button" className="chip" aria-pressed={lerValor(valor) === restante} onClick={() => { setValor(String(restante).replace('.', ',')); setErro(''); }}>
             Completar ({reais(restante)})
           </button>
         </div>
