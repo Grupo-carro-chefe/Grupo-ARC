@@ -1,6 +1,8 @@
+import { FundoCampo } from '../componentes/FundoCampo';
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { enderecoPorCep, UFS_PADRAO } from '../externo';
+import { Seletor } from '../componentes/Seletor';
 import { TIPOS, lerValor, reais } from '../formatos';
 
 const CHAVE = 'doagol:escolinha';
@@ -22,13 +24,22 @@ function Aviso({ mensagem }) {
   return <p className={mensagem.tipo === 'erro' ? 'erro' : 'sucesso'} role={mensagem.tipo === 'erro' ? 'alert' : 'status'}>{mensagem.texto}</p>;
 }
 
+const SELOS = {
+  APROVADA: { texto: 'Aprovada', tipo: 'ok' },
+  PENDENTE: { texto: 'Aguardando aprovação', tipo: 'pendente' },
+  REJEITADA: { texto: 'Rejeitada', tipo: 'rejeitada' },
+};
+
+const OPCOES_UF = [
+  { valor: '', rotulo: 'UF' },
+  ...UFS_PADRAO.map((u) => ({ valor: u.sigla, rotulo: u.nome, rotuloCurto: u.sigla, sigla: u.sigla })),
+];
+
+/** Adapta o `campo()` do formulário (onChange recebe evento) ao Seletor (onChange recebe o valor). */
+const comoSeletor = ({ value, onChange }) => ({ value, onChange: (v) => onChange({ target: { value: v } }) });
+
 function SeletorUf(props) {
-  return (
-    <select {...props}>
-      <option value="">UF</option>
-      {UFS_PADRAO.map((u) => <option key={u.sigla} value={u.sigla}>{u.sigla}</option>)}
-    </select>
-  );
+  return <Seletor {...comoSeletor(props)} opcoes={OPCOES_UF} busca placeholderBusca="Buscar UF…" textoVazio="Nenhuma UF encontrada" larguraMinima={200} required={props.required} />;
 }
 
 /** Painel da escolinha: cadastro (UC-02), aprovação (UC-11), crianças (UC-03) e pedidos (UC-04). */
@@ -133,6 +144,7 @@ export function Escolinha({ escolinhas, recarregarEscolinhas }) {
 
   return (
     <section className="pagina painel">
+      <FundoCampo />
       <h1>Área da escolinha</h1>
       <p className="painel__intro">
         Cadastre sua escolinha, as crianças atendidas e o que cada uma precisa para continuar treinando.
@@ -145,12 +157,22 @@ export function Escolinha({ escolinhas, recarregarEscolinhas }) {
             {escolinhas.length > 0 && (
               <label className="campo">
                 <span className="campo__rotulo">Já tem cadastro? Escolha a escolinha</span>
-                <select value={selecionada} onChange={(e) => escolher(e.target.value)}>
-                  <option value="">Selecione</option>
-                  {escolinhas.map((e) => (
-                    <option key={e.id} value={e.id}>{e.nome} ({e.cidade}/{e.uf}){e.status === 'PENDENTE' ? ', aguardando aprovação' : ''}</option>
-                  ))}
-                </select>
+                <Seletor
+                  value={selecionada}
+                  onChange={escolher}
+                  busca={escolinhas.length > 6}
+                  placeholderBusca="Buscar escolinha…"
+                  textoVazio="Nenhuma escolinha encontrada"
+                  opcoes={[
+                    { valor: '', rotulo: 'Escolha sua escolinha' },
+                    ...escolinhas.map((e) => ({
+                      valor: e.id,
+                      rotulo: e.nome,
+                      detalhe: `${e.cidade}/${e.uf}`,
+                      selo: SELOS[e.status],
+                    })),
+                  ]}
+                />
               </label>
             )}
             <details className="novo" open={formAberto || escolinhas.length === 0} onToggle={(e) => setFormAberto(e.currentTarget.open)}>
@@ -218,16 +240,21 @@ export function Escolinha({ escolinhas, recarregarEscolinhas }) {
                 <div className="linha">
                   <label className="campo campo--largo">
                     <span className="campo__rotulo">Criança</span>
-                    <select {...campoPedido('criancaId')} required>
-                      <option value="">Selecione</option>
-                      {criancas.map((c) => <option key={c.id} value={c.id}>{c.apelido}, {c.idade} anos</option>)}
-                    </select>
+                    <Seletor
+                      {...comoSeletor(campoPedido('criancaId'))}
+                      required
+                      opcoes={[
+                        { valor: '', rotulo: 'Selecione' },
+                        ...criancas.map((c) => ({ valor: c.id, rotulo: `${c.apelido}, ${c.idade} anos` })),
+                      ]}
+                    />
                   </label>
                   <label className="campo">
                     <span className="campo__rotulo">Tipo</span>
-                    <select {...campoPedido('tipo')}>
-                      {Object.entries(TIPOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                    </select>
+                    <Seletor
+                      {...comoSeletor(campoPedido('tipo'))}
+                      opcoes={Object.entries(TIPOS).map(([k, v]) => ({ valor: k, rotulo: v }))}
+                    />
                   </label>
                 </div>
                 <div className="linha">
