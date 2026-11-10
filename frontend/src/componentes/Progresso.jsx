@@ -12,11 +12,11 @@ export function Progresso({ arrecadado, meta, percentual, compacto = false }) {
         aria-valuenow={percentual}
         aria-label={`${percentual}% arrecadado`}
       >
-        <div className="progresso__barra" style={{ width: `${Math.min(percentual, 100)}%` }} />
+        <div className="progresso__barra" data-conta-barra style={{ width: `${Math.min(percentual, 100)}%` }} />
       </div>
       <p className="progresso__texto">
-        <strong>{reais(arrecadado)}</strong> de {reais(meta)}
-        <span className="progresso__pct">{percentual}%</span>
+        <strong data-conta-rs>{reais(arrecadado)}</strong> de {reais(meta)}
+        <span className="progresso__pct" data-conta-pct>{`${percentual}%`}</span>
       </p>
     </div>
   );

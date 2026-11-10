@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { TIPOS, reais } from '../formatos';
-import { Camisa } from '../componentes/Figurinha';
 import { Progresso } from '../componentes/Progresso';
+import { QUASE_LA } from '../componentes/Figurinha';
+import { BarraPedido } from '../componentes/BarraPedido';
+import { gsap, reduzido, contarBloco, zerarBloco, restaurarBloco } from '../movimento';
+import { FundoCampo } from '../componentes/FundoCampo';
 import { Comprovante, FormularioDoacao } from '../componentes/Doacao';
 
 /** Perfil público da criança (UC-07) com a doação (UC-08) e o comprovante (UC-09). */
@@ -11,6 +14,7 @@ export function Perfil({ id, escolinhas }) {
   const [erro, setErro] = useState('');
   const [doando, setDoando] = useState(null);
   const [concluida, setConcluida] = useState(null);
+  const [previa, setPrevia] = useState(0);
 
   async function carregar() {
     try {
@@ -23,6 +27,54 @@ export function Perfil({ id, escolinhas }) {
 
   useEffect(() => { carregar(); }, [id]);
 
+  const raiz = useRef(null);
+  const animadoDe = useRef(null);
+  const mostraLista = !!crianca && !doando && !concluida;
+
+  // Abertura (cerca de 1,5 s, uma vez por criança): card, título, pedidos em cascata, botões por último.
+  useLayoutEffect(() => {
+    if (!mostraLista || reduzido() || animadoDe.current === crianca.id) return undefined;
+    const el = raiz.current;
+    const q = (seletor) => gsap.utils.toArray(seletor, el);
+    const pedidos = q('.pedido');
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ onComplete: () => { animadoDe.current = crianca.id; } });
+      tl.from('.perfil__cartao', { x: -32, opacity: 0, duration: 0.6, ease: 'power3.out', clearProps: 'transform,opacity' }, 0);
+      if (q('.perfil__palavra').length) {
+        tl.from('.perfil__palavra', { y: 22, opacity: 0, duration: 0.5, ease: 'power3.out', stagger: 0.05 }, 0.15);
+      }
+      pedidos.forEach((li, i) => {
+        const t = 0.35 + i * 0.1;
+        const selo = li.querySelector('.cartao__selo');
+        const barra = li.querySelector('[data-conta-barra]');
+        zerarBloco(li);
+        if (barra) barra.style.transition = 'none';
+        if (selo) gsap.set(selo, { scale: 0 });
+        tl.from(li, { y: 24, opacity: 0, duration: 0.5, ease: 'power3.out', clearProps: 'transform,opacity' }, t);
+        tl.add(contarBloco(li, {
+          duracao: 0.8,
+          aoTerminar: () => {
+            if (barra) barra.style.transition = '';
+            barra?.classList.add('brilha');
+            if (selo) gsap.to(selo, { scale: 1, duration: 0.4, ease: 'back.out(1.6)', clearProps: 'transform' });
+          },
+        }), t + 0.1);
+      });
+      const ultimos = q('.pedido > .botao, .pedido__falta');
+      if (ultimos.length) {
+        tl.from(ultimos, { opacity: 0, scale: 0.96, duration: 0.4, ease: 'power2.out', stagger: 0.05, clearProps: 'transform,opacity' }, Math.max(1.0, 0.75 + pedidos.length * 0.1));
+      }
+    }, el);
+    return () => {
+      ctx.revert();
+      pedidos.forEach((li) => {
+        restaurarBloco(li);
+        const barra = li.querySelector('[data-conta-barra]');
+        if (barra) { barra.style.transition = ''; barra.classList.remove('brilha'); }
+      });
+    };
+  }, [mostraLista, crianca?.id]);
+
   if (erro) {
     return (
       <section className="pagina">
@@ -34,21 +86,33 @@ export function Perfil({ id, escolinhas }) {
   if (!crianca) return <p className="pagina carregando">Carregando perfil…</p>;
 
   const escolinha = escolinhas.find((e) => e.id === crianca.escolinhaId);
+  const selecionada = concluida ? concluida.necessidade : doando;
 
   return (
-    <section className="pagina perfil">
+    <section className="pagina perfil" ref={raiz}>
+      <FundoCampo />
       <a className="voltar" href="#/">Voltar para a busca</a>
       <div className="perfil__grade">
-        <aside className="figurinha figurinha--perfil">
-          <div className="figurinha__moldura">
-            <Camisa apelido={crianca.apelido} grande />
-            <h1 className="perfil__nome">{crianca.apelido}</h1>
-            <p className="figurinha__meta">{crianca.idade} anos, {crianca.cidade}/{crianca.uf}</p>
-            {escolinha && <p className="figurinha__escolinha">Treina na {escolinha.nome}</p>}
-            <p className="perfil__privacidade">
-              Por segurança, o nome completo e o endereço da criança ficam visíveis só para a escolinha.
-            </p>
-          </div>
+        <aside className="perfil__cartao">
+          <h1 className="perfil__nome">{crianca.apelido}, {crianca.idade} anos</h1>
+          <p className="perfil__meta">{crianca.cidade}/{crianca.uf}</p>
+          {escolinha && <p className="perfil__escolinha">{escolinha.nome}</p>}
+          {selecionada && (
+            <div className="perfil__selecionado">
+              <p className="perfil__item">
+                <span className="etiqueta">{TIPOS[selecionada.tipo]}</span>
+                {selecionada.descricao}
+              </p>
+              <BarraPedido
+                arrecadado={selecionada.valorArrecadado}
+                meta={selecionada.valorEstimado}
+                previa={concluida ? 0 : previa}
+              />
+            </div>
+          )}
+          <p className="perfil__privacidade">
+            Por segurança, o nome completo e o endereço da criança ficam visíveis só para a escolinha.
+          </p>
         </aside>
 
         <div className="perfil__pedidos">
@@ -63,16 +127,26 @@ export function Perfil({ id, escolinhas }) {
             <FormularioDoacao
               necessidade={doando}
               apelido={crianca.apelido}
-              aoCancelar={() => setDoando(null)}
+              aoMudarValor={setPrevia}
+              aoCancelar={() => { setDoando(null); setPrevia(0); }}
               aoConcluir={(comprovante) => {
-                setConcluida({ comprovante, necessidade: doando });
+                const arrecadado = Math.round((doando.valorArrecadado + comprovante.valor) * 100) / 100;
+                setConcluida({ comprovante, necessidade: { ...doando, valorArrecadado: arrecadado } });
                 setDoando(null);
+                setPrevia(0);
                 carregar();
               }}
             />
           ) : (
             <>
-              <h2>O que {crianca.apelido} precisa</h2>
+              <h2>
+                <span className="so-leitor">O que {crianca.apelido} precisa</span>
+                <span aria-hidden="true">
+                  {`O que ${crianca.apelido} precisa`.split(' ').map((palavra, i) => (
+                    <span key={i}><span className="perfil__palavra">{palavra}</span>{' '}</span>
+                  ))}
+                </span>
+              </h2>
               {crianca.necessidades.length === 0 ? (
                 <div className="vazio">
                   <p>Todos os pedidos de {crianca.apelido} já foram completados. Obrigado a quem doou!</p>
@@ -81,10 +155,10 @@ export function Perfil({ id, escolinhas }) {
               ) : (
                 <ul className="pedidos">
                   {crianca.necessidades.map((n) => (
-                    <li key={n.id} className="pedido">
+                    <li key={n.id} className="pedido" data-rs={n.valorArrecadado} data-pct={n.percentual}>
                       <div className="pedido__info">
                         <span className="etiqueta">{TIPOS[n.tipo]}</span>
-                        <h3>{n.descricao}</h3>
+                        <h3>{n.descricao}{n.percentual >= QUASE_LA && <span className="cartao__selo">Quase lá</span>}</h3>
                         <Progresso arrecadado={n.valorArrecadado} meta={n.valorEstimado} percentual={n.percentual} />
                       </div>
                       <button type="button" className="botao botao--principal" onClick={() => setDoando(n)}>

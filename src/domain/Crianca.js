@@ -3,6 +3,7 @@
 const { randomUUID } = require('crypto');
 const { Necessidade } = require('./Necessidade');
 const { textoObrigatorio, ufValida } = require('./validacoes');
+const { RegraNegocioError } = require('./erros');
 
 const IDADE_MAXIMA = 17;
 
@@ -10,17 +11,17 @@ const IDADE_MAXIMA = 17;
 function dataEmUtc(valor) {
   if (valor instanceof Date) {
     if (Number.isNaN(valor.getTime())) {
-      throw new Error('Data de nascimento inválida.');
+      throw new RegraNegocioError('Data de nascimento inválida.');
     }
     return new Date(Date.UTC(valor.getUTCFullYear(), valor.getUTCMonth(), valor.getUTCDate()));
   }
   if (typeof valor !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
-    throw new Error('Data de nascimento deve estar no formato AAAA-MM-DD.');
+    throw new RegraNegocioError('Data de nascimento deve estar no formato AAAA-MM-DD.');
   }
   const [ano, mes, dia] = valor.split('-').map(Number);
   const data = new Date(Date.UTC(ano, mes - 1, dia));
   if (data.getUTCMonth() !== mes - 1 || data.getUTCDate() !== dia) {
-    throw new Error(`Data de nascimento inexistente: ${valor}.`);
+    throw new RegraNegocioError(`Data de nascimento inexistente: ${valor}.`);
   }
   return data;
 }
@@ -34,7 +35,7 @@ function anosCompletos(nascimento, hoje) {
 
 function validarEndereco(endereco) {
   if (endereco === null || typeof endereco !== 'object') {
-    throw new Error('Endereço é obrigatório.');
+    throw new RegraNegocioError('Endereço é obrigatório.');
   }
   const validado = {
     logradouro: textoObrigatorio(endereco.logradouro, 'Logradouro'),
@@ -52,7 +53,8 @@ function validarEndereco(endereco) {
 /**
  * Criança atendida por uma escolinha (UC-03, RF03). Nome civil, data de nascimento e endereço
  * são dados sensíveis (RF06, RNF01): ficam em propriedades com prefixo `_` e nunca saem em
- * `perfilPublico()` nem em `JSON.stringify`, que mostram só apelido, idade, cidade e UF.
+ * `perfilPublico()` nem em `JSON.stringify`. O perfil público traz só id, apelido, idade,
+ * escolinhaId, cidade, UF e as necessidades abertas.
  */
 class Crianca {
   /**
@@ -71,16 +73,35 @@ class Crianca {
 
     const idade = anosCompletos(this._dataNascimento, new Date());
     if (idade < 0) {
-      throw new Error('Data de nascimento não pode estar no futuro.');
+      throw new RegraNegocioError('Data de nascimento não pode estar no futuro.');
     }
     if (idade > IDADE_MAXIMA) {
-      throw new Error('O DoaGol atende apenas menores de 18 anos.');
+      throw new RegraNegocioError('O DoaGol atende apenas menores de 18 anos.');
     }
 
     this.id = id;
     this.apelido = textoObrigatorio(apelido, 'Apelido');
     this.escolinhaId = textoObrigatorio(escolinhaId, 'Escolinha');
     this._necessidades = [];
+  }
+
+  /**
+   * Recria uma criança a partir do que foi salvo (ex.: lida do banco). Não repete a checagem de
+   * idade: quem foi cadastrado aos 17 anos continua no sistema depois de fazer 18.
+   * `dataNascimento` é 'AAAA-MM-DD'; `necessidades` são objetos Necessidade já reconstituídos.
+   */
+  static reconstituir({ id, escolinhaId, apelido, nomeCivil, dataNascimento, endereco, necessidades = [] }) {
+    const crianca = Object.create(Crianca.prototype);
+    Object.assign(crianca, {
+      id,
+      apelido,
+      escolinhaId,
+      _nomeCivil: nomeCivil,
+      _dataNascimento: dataEmUtc(dataNascimento),
+      _endereco: Object.freeze({ ...endereco }),
+      _necessidades: [...necessidades],
+    });
+    return crianca;
   }
 
   get cidade() {
@@ -104,7 +125,7 @@ class Crianca {
   /** Vincula uma necessidade à criança (RF04). */
   adicionarNecessidade(necessidade) {
     if (!(necessidade instanceof Necessidade)) {
-      throw new Error('Necessidade inválida.');
+      throw new RegraNegocioError('Necessidade inválida.');
     }
     this._necessidades.push(necessidade);
   }

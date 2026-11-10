@@ -3,6 +3,7 @@
 const { randomUUID } = require('crypto');
 const { Crianca } = require('./Crianca');
 const { textoObrigatorio, ufValida } = require('./validacoes');
+const { RegraNegocioError } = require('./erros');
 
 /**
  * Ciclo de cadastro de uma escolinha (UC-02, UC-11):
@@ -33,13 +34,23 @@ class Escolinha {
     this.motivoRejeicao = null;
   }
 
+  /**
+   * Recria uma escolinha a partir do que foi salvo (ex.: lida do banco), no estado exato em que
+   * estava, sem refazer as regras de criação.
+   */
+  static reconstituir({ id, nome, cidade, uf, status, motivoRejeicao = null }) {
+    const escolinha = Object.create(Escolinha.prototype);
+    Object.assign(escolinha, { id, nome, cidade, uf, status, motivoRejeicao });
+    return escolinha;
+  }
+
   estaAprovada() {
     return this.status === StatusEscolinha.APROVADA;
   }
 
   _exigirPendente(acao) {
     if (this.status !== StatusEscolinha.PENDENTE) {
-      throw new Error(`Só é possível ${acao} escolinhas pendentes (status atual: ${this.status}).`);
+      throw new RegraNegocioError(`Só é possível ${acao} escolinhas pendentes (status atual: ${this.status}).`);
     }
   }
 
@@ -59,7 +70,7 @@ class Escolinha {
   /** Cadastra uma criança vinculada a esta escolinha; exige cadastro aprovado (UC-03, RF03). */
   cadastrarCrianca(dados) {
     if (!this.estaAprovada()) {
-      throw new Error('A escolinha precisa ter o cadastro aprovado para cadastrar crianças.');
+      throw new RegraNegocioError('A escolinha precisa ter o cadastro aprovado para cadastrar crianças.');
     }
     return new Crianca({ ...dados, escolinhaId: this.id });
   }

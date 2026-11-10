@@ -2,6 +2,7 @@
 
 const { randomUUID } = require('crypto');
 const { textoObrigatorio, emCentavos } = require('./validacoes');
+const { RegraNegocioError } = require('./erros');
 
 /** Formas de pagamento aceitas na doação (RF07). */
 const FormaPagamento = Object.freeze({
@@ -37,20 +38,20 @@ class Doacao {
     data = new Date(),
   } = {}) {
     if (typeof valor !== 'number' || !Number.isFinite(valor) || valor <= 0) {
-      throw new Error('Valor da doação deve ser um número maior que zero.');
+      throw new RegraNegocioError('Valor da doação deve ser um número maior que zero.');
     }
     if (Math.abs(valor * 100 - emCentavos(valor)) > 1e-6) {
-      throw new Error('Valor da doação deve ter no máximo duas casas decimais.');
+      throw new RegraNegocioError('Valor da doação deve ter no máximo duas casas decimais.');
     }
     // A tolerância acima aceita valores como 5e-9, que arredondam para 0 centavos.
     if (emCentavos(valor) < 1) {
-      throw new Error('Valor da doação deve ser de pelo menos R$ 0,01.');
+      throw new RegraNegocioError('Valor da doação deve ser de pelo menos R$ 0,01.');
     }
     if (!Object.values(FormaPagamento).includes(formaPagamento)) {
-      throw new Error(`Forma de pagamento inválida: ${formaPagamento}.`);
+      throw new RegraNegocioError(`Forma de pagamento inválida: ${formaPagamento}.`);
     }
     if (typeof anonima !== 'boolean') {
-      throw new Error('O campo anônima deve ser verdadeiro ou falso.');
+      throw new RegraNegocioError('O campo anônima deve ser verdadeiro ou falso.');
     }
 
     this.id = id;

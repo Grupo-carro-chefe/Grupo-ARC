@@ -1,11 +1,8 @@
 'use strict';
 
 const { TipoNecessidade } = require('../domain/Necessidade');
-
-/** Remove acentos, espaços nas pontas e diferença de caixa ("São Paulo" === "sao paulo"). */
-function normalizar(texto) {
-  return String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
-}
+const { normalizar } = require('../domain/validacoes');
+const { RegraNegocioError } = require('../domain/erros');
 
 /** Busca de crianças com necessidades abertas por cidade, UF e tipo (UC-06, RF05, RF06). */
 class BuscaService {
@@ -16,14 +13,15 @@ class BuscaService {
 
   /**
    * Filtros vazios são ignorados. Devolve apenas o perfil público de cada criança (RNF01).
-   * ponytail: varre a lista inteira em memória; trocar por consulta com índice no PostgreSQL.
+   * Com PostgreSQL o repositório já filtra pelos índices; o filtro abaixo repete a regra e vale
+   * também para o repositório em memória, que devolve tudo.
    */
-  buscar({ cidade, uf, tipo } = {}) {
+  async buscar({ cidade, uf, tipo } = {}) {
     if (tipo && !Object.values(TipoNecessidade).includes(tipo)) {
-      throw new Error(`Tipo de necessidade inválido: ${tipo}.`);
+      throw new RegraNegocioError(`Tipo de necessidade inválido: ${tipo}.`);
     }
-    return this.criancas
-      .listar()
+    const candidatas = await this.criancas.listar({ cidade, uf, tipo, comNecessidadeAberta: true });
+    return candidatas
       .filter((c) => !cidade || normalizar(c.cidade) === normalizar(cidade))
       .filter((c) => !uf || c.uf === String(uf).trim().toUpperCase())
       .filter((c) => c.necessidadesAtivas().some((n) => !tipo || n.tipo === tipo))

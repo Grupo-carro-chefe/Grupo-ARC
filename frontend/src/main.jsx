@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { api } from './api';
 import { Busca } from './paginas/Busca';
 import { Perfil } from './paginas/Perfil';
 import { Escolinha } from './paginas/Escolinha';
+import { gsap, iniciarRolagem, voltarAoTopo, reduzido, gravarEscolha, aplicarPreferencia } from './movimento';
 
 /** Rotas por hash (#/, #/crianca/:id, #/escolinha): funcionam em qualquer hospedagem estática. */
 function lerRota() {
@@ -22,6 +23,20 @@ function Marca() {
   );
 }
 
+/** Liga ou desliga as animações; a escolha vale sobre o sistema e a página recarrega para reiniciar o movimento. */
+function BotaoAnimacoes() {
+  const ligadas = !reduzido();
+  const trocar = () => {
+    gravarEscolha(ligadas ? 'desligadas' : 'ligadas');
+    window.location.reload();
+  };
+  return (
+    <button type="button" className="menu__animacoes" aria-pressed={ligadas} onClick={trocar}>
+      Animações: {ligadas ? 'ligadas' : 'desligadas'}
+    </button>
+  );
+}
+
 function App() {
   const [rota, setRota] = useState(lerRota);
   const [escolinhas, setEscolinhas] = useState([]);
@@ -31,11 +46,22 @@ function App() {
   };
 
   useEffect(() => {
-    const aoMudar = () => { setRota(lerRota()); window.scrollTo(0, 0); };
+    const aoMudar = () => { setRota(lerRota()); voltarAoTopo(); };
     window.addEventListener('hashchange', aoMudar);
     recarregarEscolinhas();
-    return () => window.removeEventListener('hashchange', aoMudar);
+    const desligarRolagem = iniciarRolagem();
+    return () => { window.removeEventListener('hashchange', aoMudar); desligarRolagem(); };
   }, []);
+
+  // Entrada curta ao trocar de página (fade, 0,3 s); a primeira abertura fica com o hero.
+  const principal = useRef(null);
+  const primeira = useRef(true);
+  useLayoutEffect(() => {
+    if (primeira.current) { primeira.current = false; return undefined; }
+    if (reduzido() || !principal.current) return undefined;
+    const anim = gsap.fromTo(principal.current, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power1.out', clearProps: 'opacity' });
+    return () => { anim.kill(); gsap.set(principal.current, { clearProps: 'opacity' }); };
+  }, [rota.pagina]);
 
   return (
     <>
@@ -44,9 +70,10 @@ function App() {
         <nav className="menu" aria-label="Principal">
           <a href="#/" aria-current={rota.pagina !== 'escolinha' ? 'page' : undefined}>Quero doar</a>
           <a href="#/escolinha" aria-current={rota.pagina === 'escolinha' ? 'page' : undefined}>Sou escolinha</a>
+          <BotaoAnimacoes />
         </nav>
       </header>
-      <main>
+      <main ref={principal}>
         {rota.pagina === 'busca' && <Busca escolinhas={escolinhas} />}
         {rota.pagina === 'perfil' && <Perfil id={rota.id} escolinhas={escolinhas} />}
         {rota.pagina === 'escolinha' && <Escolinha escolinhas={escolinhas} recarregarEscolinhas={recarregarEscolinhas} />}
@@ -59,4 +86,5 @@ function App() {
   );
 }
 
+aplicarPreferencia();
 createRoot(document.getElementById('raiz')).render(<App />);
