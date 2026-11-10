@@ -4,6 +4,7 @@ import { api } from './api';
 import { Busca } from './paginas/Busca';
 import { Perfil } from './paginas/Perfil';
 import { Escolinha } from './paginas/Escolinha';
+import { iniciarRolagem, voltarAoTopo } from './movimento';
 
 /** Rotas por hash (#/, #/crianca/:id, #/escolinha): funcionam em qualquer hospedagem estática. */
 function lerRota() {
@@ -31,10 +32,11 @@ function App() {
   };
 
   useEffect(() => {
-    const aoMudar = () => { setRota(lerRota()); window.scrollTo(0, 0); };
+    const aoMudar = () => { setRota(lerRota()); voltarAoTopo(); };
     window.addEventListener('hashchange', aoMudar);
     recarregarEscolinhas();
-    return () => window.removeEventListener('hashchange', aoMudar);
+    const desligarRolagem = iniciarRolagem();
+    return () => { window.removeEventListener('hashchange', aoMudar); desligarRolagem(); };
   }, []);
 
   return (
