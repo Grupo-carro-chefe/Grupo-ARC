@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { FORMAS_PAGAMENTO, TIPOS, dataHora, lerValor, reais } from '../formatos';
 import { gsap, reduzido } from '../movimento';
@@ -81,8 +81,16 @@ export function FormularioDoacao({ necessidade, apelido, aoConcluir, aoCancelar,
     }
   }
 
+  // Entrada do formulário: fade + 16 px (só a aparência; a doação não muda)
+  const formRef = useRef(null);
+  useLayoutEffect(() => {
+    if (reduzido() || !formRef.current) return undefined;
+    const anim = gsap.fromTo(formRef.current, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out', clearProps: 'opacity,transform' });
+    return () => { anim.kill(); gsap.set(formRef.current, { clearProps: 'opacity,transform' }); };
+  }, []);
+
   return (
-    <form className="doacao" onSubmit={confirmar} noValidate>
+    <form className="doacao" ref={formRef} onSubmit={confirmar} noValidate>
       <h2 className="doacao__titulo">Doar para {apelido}</h2>
       <p className="doacao__alvo">
         {necessidade.descricao} <span className="etiqueta">{TIPOS[necessidade.tipo]}</span>

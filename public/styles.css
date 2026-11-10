@@ -201,8 +201,8 @@ input:focus, select:focus { border-color: var(--gramado); outline: none; box-sha
 /* Barra e números (cartões e janelas do app) */
 .trilha { position: relative; height: 8px; background: #E3EAE1; border-radius: 99px; }
 .trilha i { position: absolute; left: 0; top: 0; bottom: 0; display: block; background: var(--amarelo); border-radius: 99px; overflow: hidden; }
-.trilha i::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -50%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent); }
-.trilha i.brilha::after { animation: brilho 1s ease-in-out .2s; }
+.trilha i::after, .progresso__barra::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -50%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent); }
+.trilha i.brilha::after, .progresso__barra.brilha::after { animation: brilho 1s ease-in-out .2s; }
 @keyframes brilho { to { left: 120%; } }
 .nums { display: flex; justify-content: space-between; gap: .5rem; margin: .4rem 0 0; font-size: .8rem; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
 .nums b { color: var(--tinta); }
@@ -237,7 +237,7 @@ input:focus, select:focus { border-color: var(--gramado); outline: none; box-sha
 
 /* Progresso */
 .progresso__trilho { height: 10px; background: var(--grama-clara); border: 1px solid var(--linha); border-radius: 999px; overflow: hidden; }
-.progresso__barra { height: 100%; background: var(--amarelo); border-radius: 999px; transition: width .6s ease; }
+.progresso__barra { position: relative; overflow: hidden; height: 100%; background: var(--amarelo); border-radius: 999px; transition: width .6s ease; }
 .progresso__texto { display: flex; gap: .3rem; align-items: baseline; margin: .3rem 0 0; font-size: .85rem; color: var(--tinta-suave); }
 .progresso__texto strong { color: var(--tinta); }
 .progresso__pct { margin-left: auto; font-weight: 700; color: var(--gramado-escuro); }
@@ -343,6 +343,7 @@ input:focus, select:focus { border-color: var(--gramado); outline: none; box-sha
   padding: 1.25rem 0; border-top: 1px solid var(--linha);
 }
 .pedido:first-child { border-top: 0; padding-top: .25rem; }
+.perfil__palavra { display: inline-block; }
 .pedido h3 { margin: .35rem 0 .6rem; font-size: 1.12rem; }
 .pedido__falta { grid-column: 2; margin: 0; text-align: center; font-size: .8rem; color: var(--tinta-suave); }
 

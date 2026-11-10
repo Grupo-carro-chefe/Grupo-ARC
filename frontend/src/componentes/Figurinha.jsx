@@ -15,7 +15,7 @@ export function Camisa({ apelido, grande = false }) {
 }
 
 /** Passa de 70%: o pedido ganha o selo "Quase lá". */
-const QUASE_LA = 70;
+export const QUASE_LA = 70;
 
 /**
  * Cartão de uma criança na busca (UC-06). O cartão inteiro é um link para o perfil.

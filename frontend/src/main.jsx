@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { api } from './api';
 import { Busca } from './paginas/Busca';
 import { Perfil } from './paginas/Perfil';
 import { Escolinha } from './paginas/Escolinha';
-import { iniciarRolagem, voltarAoTopo, reduzido, gravarEscolha, aplicarPreferencia } from './movimento';
+import { gsap, iniciarRolagem, voltarAoTopo, reduzido, gravarEscolha, aplicarPreferencia } from './movimento';
 
 /** Rotas por hash (#/, #/crianca/:id, #/escolinha): funcionam em qualquer hospedagem estática. */
 function lerRota() {
@@ -53,6 +53,16 @@ function App() {
     return () => { window.removeEventListener('hashchange', aoMudar); desligarRolagem(); };
   }, []);
 
+  // Entrada curta ao trocar de página (fade, 0,3 s); a primeira abertura fica com o hero.
+  const principal = useRef(null);
+  const primeira = useRef(true);
+  useLayoutEffect(() => {
+    if (primeira.current) { primeira.current = false; return undefined; }
+    if (reduzido() || !principal.current) return undefined;
+    const anim = gsap.fromTo(principal.current, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power1.out', clearProps: 'opacity' });
+    return () => { anim.kill(); gsap.set(principal.current, { clearProps: 'opacity' }); };
+  }, [rota.pagina]);
+
   return (
     <>
       <header className="topo">
@@ -63,7 +73,7 @@ function App() {
           <BotaoAnimacoes />
         </nav>
       </header>
-      <main>
+      <main ref={principal}>
         {rota.pagina === 'busca' && <Busca escolinhas={escolinhas} />}
         {rota.pagina === 'perfil' && <Perfil id={rota.id} escolinhas={escolinhas} />}
         {rota.pagina === 'escolinha' && <Escolinha escolinhas={escolinhas} recarregarEscolinhas={recarregarEscolinhas} />}
