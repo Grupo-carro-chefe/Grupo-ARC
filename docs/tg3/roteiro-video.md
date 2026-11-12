@@ -16,7 +16,7 @@ Endereços usados na gravação:
 4. Abas abertas na ordem: (1) http://localhost:3100, (2) GitHub Actions, (3) https://doagol.onrender.com. Abrir a aba 3 uns 2 minutos antes: o plano Free do Render dorme após 15 minutos sem acesso.
 5. Notificações do Windows desligadas (Não Perturbe ativo). Fechar as outras abas e manter a barra de tarefas oculta.
 6. Gravador: Xbox Game Bar (Win+Alt+R) com microfone desligado e áudio do sistema desligado, ou OBS sem fonte de áudio. Sem áudio, o vídeo final não tem faixa de som.
-7. Teste rápido: abrir a Busca e confirmar que aparecem seis crianças (Kauã, Lívia, Pedrinho, Juju, Davi e Gabi), com Kauã em 40% na chuteira (R$ 72,00 de R$ 180,00), Juju em 75% e Gabi em 71%. Se algum valor vier diferente, o servidor já tinha doações de testes: reiniciar antes de gravar.
+7. Teste rápido: abrir a Busca e confirmar que aparecem 24 crianças (os primeiros cards são Kauã, Lívia, Pedrinho, Juju, Davi e Gabi), com Kauã em 40% na chuteira (R$ 72,00 de R$ 180,00), Juju em 75% e Gabi em 71%. A área da escolinha lista 12 escolinhas: 10 aprovadas, 1 pendente e 1 rejeitada. Se algum valor vier diferente, o servidor já tinha doações de testes: reiniciar antes de gravar.
 
 ## Tempo das cenas
 
@@ -53,13 +53,13 @@ Endereços usados na gravação:
 **Ações**
 1. Rolar devagar com a roda do mouse. A rolagem é suave (Lenis). O campo recua e fica para trás enquanto a lista sobe.
 2. Na seção "O app por dentro", a janela inclinada endireita ao rolar. O total de Kauã conta até R$ 72,00 arrecadados de R$ 290,00. Os dois balões aparecem: "IBGE + ViaCEP" e "Comprovante na hora".
-3. Continuar até os cards. Juju (75%) e Gabi (71%) mostram o selo "Quase lá".
+3. Continuar até os cards. Os pedidos a partir de 70% mostram o selo "Quase lá", como o de Juju (75%) e o de Gabi (71%).
 4. Seguir para "Como doar". O texto fica à esquerda e a janela à direita troca de tela: busca, perfil e comprovante. Rolar em ritmo de uns 5 segundos por passo.
 
 **Legendas**
 - "Campo recua e a lista sobe"
 - "Dados de estado e cidade vêm do IBGE"
-- "Juju e Gabi estão quase lá"
+- "Pedidos perto da meta ganham o selo Quase lá"
 - "Como doar em três passos"
 
 **Não fazer**
@@ -72,8 +72,8 @@ Endereços usados na gravação:
 
 **Ações**
 1. Rolar de volta ao topo com a roda do mouse.
-2. No campo Estado, clicar, digitar `sao` (sem acento) e escolher "São Paulo". A lista mostra "2 crianças precisam de ajuda" (Kauã e Lívia). A página desce até os resultados.
-3. No campo Tipo de pedido, escolher "Transporte". A lista mostra "1 criança precisa de ajuda" (Kauã, com o bilhete de ônibus).
+2. No campo Estado, clicar, digitar `sao` (sem acento) e escolher "São Paulo". A lista mostra "5 crianças precisam de ajuda" (Kauã, Lívia, Thiago, Miguel e Aninha). A página desce até os resultados.
+3. No campo Tipo de pedido, escolher "Transporte". A lista mostra "2 crianças precisam de ajuda" (Kauã, com o bilhete de ônibus, e Miguel, com o passe mensal). Sem o filtro de estado, o tipo Transporte daria 7 crianças.
 4. Clicar no cartão de Kauã. Ele abre o perfil.
 
 **Legendas**
@@ -126,7 +126,7 @@ Endereços usados na gravação:
    - Número: 1000
    Clicar em "Cadastrar criança".
 5. Em "Cadastrar pedido", escolher a criança "Nina, 9 anos", tipo "Material esportivo", descrição "Chuteira de futsal nº 33" e valor "150,00". Clicar em "Publicar pedido".
-6. Clicar em "Quero doar" no menu. Em Estado, escolher "São Paulo". Nina aparece na lista com Kauã e Lívia.
+6. Clicar em "Quero doar" no menu. Em Estado, escolher "São Paulo". Nina aparece na lista de São Paulo.
 
 **Legendas**
 - "Escolinha cadastrada e aprovada pelo administrador"
