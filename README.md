@@ -71,7 +71,7 @@ src/
 ├── api/        app.js: rotas Express e tradução de erros em códigos HTTP
 ├── services/   BuscaService (UC-06) e DoacaoService (UC-08)
 ├── domain/     Necessidade, Escolinha, Crianca, Doacao e validações
-├── infra/      repositório em memória, gateway de pagamento e notificador simulados
+├── infra/      repositórios em memória e em PostgreSQL (infra/postgres), gateway de pagamento e notificador simulados
 └── server.js   sobe a API
 tests/          testes Jest de cada classe, dos serviços e da API (supertest)
 docs/sprint3/   casos de uso, Kanban e daily da sprint
@@ -103,7 +103,6 @@ As respostas nunca trazem nome civil, data de nascimento ou endereço da crianç
 
 - Autenticação e papéis de usuário (UC-01), ainda planejados: por enquanto as rotas são abertas.
 - Gateway de pagamento e serviço de e-mail reais (hoje são simulados).
-- Persistência em PostgreSQL: hoje os dados ficam em memória e somem ao reiniciar. A troca está em andamento na branch `feat/banco-neon` (ver [Banco de dados](#banco-de-dados)).
 - Gestão de usuários e moderação (UC-12, UC-13).
 
 ### Documentação da sprint
@@ -155,7 +154,10 @@ As APIs externas são opcionais: se não responderem, os campos continuam funcio
 
 - O PostgreSQL fica no **Neon**, na região AWS us-east-1.
 - A connection string vai na variável `DATABASE_URL`: no Environment do serviço `doagol` no Render e num `.env.local` na máquina local. O `.gitignore` ignora `.env.*`, então o arquivo local não entra no repositório.
-- **Em andamento na branch `feat/banco-neon`:** a troca do repositório em memória pelo PostgreSQL. Enquanto essa branch não entrar na `main`, a API guarda os dados em memória e não lê `DATABASE_URL`.
+- **Em produção:** com `DATABASE_URL` definida, o `src/server.js` conecta ao PostgreSQL, aplica no início as migrations de `db/migrations/` ainda não registradas e usa os repositórios de `src/infra/postgres/`. A doação grava o valor e a necessidade numa transação, com `SELECT ... FOR UPDATE` na necessidade.
+- **Dados de exemplo:** são carregados só se o banco ainda não tiver nenhuma escolinha; um banco com dados nunca é alterado.
+- **Sem `DATABASE_URL`:** a API usa os repositórios em memória, e os dados somem ao reiniciar.
+- **Rodar localmente com o banco:** crie um `.env.local` com `DATABASE_URL` e use `npm run dev:banco`.
 
 ### Estrutura
 
@@ -193,7 +195,7 @@ push na main ──> GitHub Actions (testes + cobertura) ──✓──> Render
 ```
 
 No plano gratuito o serviço dorme após 15 minutos sem acesso e leva até 1 minuto para acordar; como os
-dados ficam em memória, eles voltam aos exemplos a cada reinício.
+dados ficam no PostgreSQL do Neon, eles sobrevivem a reinícios.
 
 ### Documentação do TG3
 
