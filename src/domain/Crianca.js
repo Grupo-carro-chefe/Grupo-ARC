@@ -33,6 +33,21 @@ function anosCompletos(nascimento, hoje) {
   return mesDia(hoje) < mesDia(nascimento) ? anos - 1 : anos;
 }
 
+/**
+ * CEP opcional: ausente, nulo ou vazio significa "sem CEP" (devolve undefined). Quando informado,
+ * precisa ser texto com 8 dígitos, aceitando no máximo um separador (hífen, espaço ou ponto) entre
+ * eles. Guarda só os 8 dígitos. Não consulta serviço externo.
+ */
+function cepNormalizado(valor) {
+  if (valor === undefined || valor === null) return undefined;
+  if (typeof valor !== 'string') throw new RegraNegocioError('CEP inválido: informe 8 dígitos.');
+  const texto = valor.trim();
+  if (texto === '') return undefined;
+  const casado = /^(\d{5})[-. ]?(\d{3})$/.exec(texto);
+  if (!casado) throw new RegraNegocioError('CEP inválido: informe 8 dígitos.');
+  return casado.slice(1).join('');
+}
+
 function validarEndereco(endereco) {
   if (endereco === null || typeof endereco !== 'object') {
     throw new RegraNegocioError('Endereço é obrigatório.');
@@ -42,7 +57,9 @@ function validarEndereco(endereco) {
     cidade: textoObrigatorio(endereco.cidade, 'Cidade'),
     uf: ufValida(endereco.uf),
   };
-  for (const campo of ['numero', 'bairro', 'cep']) {
+  const cep = cepNormalizado(endereco.cep);
+  if (cep !== undefined) validado.cep = cep;
+  for (const campo of ['numero', 'bairro']) {
     if (endereco[campo] !== undefined && endereco[campo] !== null) {
       validado[campo] = String(endereco[campo]).trim();
     }
