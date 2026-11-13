@@ -1,6 +1,7 @@
 'use strict';
 
 const { Crianca } = require('../src/domain/Crianca');
+const { RegraNegocioError } = require('../src/domain/erros');
 const { StatusNecessidade } = require('../src/domain/Necessidade');
 const { dadosCrianca, novaNecessidade } = require('./helpers');
 
@@ -76,9 +77,42 @@ describe('Crianca', () => {
       const minimo = criar({ endereco: { logradouro: 'Rua A', cidade: 'Santos', uf: 'SP', numero: null } });
 
       expect(completo.dadosRestritos().endereco).toEqual({
-        logradouro: 'Rua A', cidade: 'Santos', uf: 'SP', numero: '45', bairro: 'Centro', cep: '11010-000',
+        logradouro: 'Rua A', cidade: 'Santos', uf: 'SP', numero: '45', bairro: 'Centro', cep: '11010000',
       });
       expect(minimo.dadosRestritos().endereco).toEqual({ logradouro: 'Rua A', cidade: 'Santos', uf: 'SP' });
+    });
+
+    describe('CEP (opcional, validado no servidor, gravado só com os 8 dígitos)', () => {
+      const comCep = (cep) => criar({ endereco: { logradouro: 'Rua A', cidade: 'Santos', uf: 'SP', cep } });
+
+      test.each([
+        ['com hífen', '01310-100'],
+        ['só dígitos', '01310100'],
+        ['com espaços nas pontas', ' 01310-100 '],
+        ['com ponto', '01310.100'],
+        ['com espaço no meio', '01310 100'],
+      ])('aceita CEP %s e grava 01310100', (_nome, cep) => {
+        expect(comCep(cep).dadosRestritos().endereco.cep).toBe('01310100');
+      });
+
+      test.each([undefined, null, '', '   '])('CEP %p significa sem CEP e não grava o campo', (cep) => {
+        expect(comCep(cep).dadosRestritos().endereco).toEqual({ logradouro: 'Rua A', cidade: 'Santos', uf: 'SP' });
+      });
+
+      test.each([
+        ['letras', 'abc'],
+        ['letra no fim', '0131-0100x'],
+        ['7 dígitos', '1234567'],
+        ['9 dígitos', '123456789'],
+        ['dois separadores', '01.310-100'],
+        ['número JSON', 1310100],
+        ['objeto', { cep: '01310100' }],
+        ['lista', ['01310100']],
+        ['booleano', true],
+      ])('recusa CEP inválido (%s)', (_nome, cep) => {
+        expect(() => comCep(cep)).toThrow(RegraNegocioError);
+        expect(() => comCep(cep)).toThrow('CEP inválido: informe 8 dígitos.');
+      });
     });
 
     test('caso 9: guarda o endereço congelado, sem referência ao objeto recebido', () => {
@@ -244,7 +278,7 @@ describe('Crianca', () => {
       expect(criar().dadosRestritos()).toEqual({
         nomeCivil: 'Maria Aparecida da Silva',
         dataNascimento: '2016-05-10',
-        endereco: { logradouro: 'Rua das Acácias', numero: '120', bairro: 'Jardim Ângela', cidade: 'São Paulo', uf: 'SP', cep: '04930-000' },
+        endereco: { logradouro: 'Rua das Acácias', numero: '120', bairro: 'Jardim Ângela', cidade: 'São Paulo', uf: 'SP', cep: '04930000' },
       });
     });
 
