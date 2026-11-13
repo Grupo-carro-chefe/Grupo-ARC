@@ -78,6 +78,6 @@ cobrada e depois rejeitada por exceder a meta.
 
 - **Autenticação e papéis (UC-01):** o `doadorId` vem no corpo da requisição e a rota de aprovação de escolinha está aberta.
 - **Gateway de pagamento e e-mail reais:** usamos `GatewayPagamentoSimulado` e `NotificadorEmMemoria`.
-- **PostgreSQL:** os dados ficam em `RepositorioEmMemoria` e se perdem ao reiniciar o servidor.
-- **Front-end React:** a API pode ser exercitada com `curl` ou pelos testes.
+- **PostgreSQL:** na Sprint 3 os dados ficavam em `RepositorioEmMemoria`. Depois da sprint, a persistência no Neon entrou (PR #21): `src/infra/postgres/`, `db/migrations/`; sem `DATABASE_URL` ainda se usa a memória.
+- **Front-end React:** na Sprint 3 a API era exercitada com `curl` ou pelos testes. O front-end React entrou depois, no TG3 (`frontend/`).
 - **UC-10** (painel da escolinha), **UC-12** e **UC-13** (gestão de usuários e moderação).
