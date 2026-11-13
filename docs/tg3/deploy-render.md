@@ -6,16 +6,16 @@ compilado (`public/`). O plano gratuito é suficiente para a demonstração.
 ## Criar o serviço (uma vez)
 
 1. Entre em <https://dashboard.render.com> com a conta do GitHub de quem administra o repositório.
-2. Clique em **New > Blueprint** e escolha o repositório `Grupo-carro-chefe/Grupo-ARC`, branch `main`.
+2. Clique em New > Blueprint e escolha o repositório `Grupo-carro-chefe/Grupo-ARC`, branch `main`.
    O Render lê o [`render.yaml`](../../render.yaml) e mostra o serviço `doagol` com o plano Free.
-3. Confirme em **Apply**. O primeiro deploy leva de 2 a 4 minutos.
-4. Quando o status ficar **Live**, abra a URL do serviço (algo como `https://doagol.onrender.com`) e
+3. Confirme em Apply. O primeiro deploy leva de 2 a 4 minutos.
+4. Quando o status ficar Live, abra a URL do serviço (algo como `https://doagol.onrender.com`) e
    confira `/saude`, que deve responder `{"status":"ok"}`.
 5. Atualize a URL no topo da seção TG3 do README.
 
 ### Se o Blueprint pedir cartão de crédito
 
-Crie o serviço à mão, que no plano Free não pede cartão: **New > Web Service**, escolha o repositório e preencha:
+Crie o serviço à mão, que no plano Free não pede cartão: New > Web Service, escolha o repositório e preencha:
 
 | Campo | Valor |
 |---|---|
@@ -33,8 +33,9 @@ Crie o serviço à mão, que no plano Free não pede cartão: **New > Web Servic
 - Cada merge na `main` com a esteira verde publica uma versão nova sozinho.
 - O serviço gratuito dorme depois de 15 minutos sem acesso. Antes da apresentação, abra a URL um ou dois
   minutos antes para ele acordar.
-- Os dados ficam em memória: a cada reinício voltam os exemplos. Para começar sem eles, defina
-  `DADOS_EXEMPLO=false` nas variáveis de ambiente.
+- Sem `DATABASE_URL`, os dados ficam em memória e a cada reinício voltam os exemplos. Com o banco do Neon
+  ligado (`DATABASE_URL` no Environment do serviço), os dados sobrevivem a reinícios e os exemplos só entram se o
+  banco estiver vazio. Para começar sem exemplos, defina `DADOS_EXEMPLO=false`.
 
 ## Front-end em outro endereço (opcional)
 

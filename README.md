@@ -13,13 +13,13 @@ Laboratório de Engenharia de Software, Universidade Presbiteriana Mackenzie.
 
 ## Entrega 2: classe implementada e testes
 
-Para a camada de aplicação, adotamos **Node.js**, mantendo JavaScript de ponta a ponta com o
-front-end em React definido na arquitetura (Capítulo 6). Os testes unitários usam **Jest**, e a
-integração contínua roda no **GitHub Actions**.
+Para a camada de aplicação, adotamos Node.js, mantendo JavaScript de ponta a ponta com o
+front-end em React definido na arquitetura (Capítulo 6). Os testes unitários usam Jest, e a
+integração contínua roda no GitHub Actions.
 
-A classe implementada é **`Necessidade`** (diagrama de classes, Figura 5.2), que representa a
+A classe implementada é `Necessidade` (diagrama de classes, Figura 5.2), que representa a
 necessidade concreta de uma criança (ex.: "Chuteira de futsal nº 33") e concentra as regras dos
-requisitos **RF04** (cadastrar, editar e encerrar necessidades) e **RF08** (atualizar o valor
+requisitos RF04 (cadastrar, editar e encerrar necessidades) e RF08 (atualizar o valor
 arrecadado após a confirmação do pagamento).
 
 | Arquivo | Conteúdo |
@@ -59,9 +59,9 @@ npm run test:coverage  # roda os testes com relatório de cobertura
 
 ## Entrega 3: início da implementação (Sprint 3)
 
-Nesta sprint o projeto passou a ter um back-end em camadas, com uma API REST em **Express 5**
-que implementa os casos de uso **UC-03 Cadastrar Criança**, **UC-06 Buscar Crianças/Necessidades**
-e **UC-08 Realizar Doação** (com o comprovante do UC-09), além do cadastro e da aprovação de
+Nesta sprint o projeto passou a ter um back-end em camadas, com uma API REST em Express 5
+que implementa os casos de uso UC-03 Cadastrar Criança, UC-06 Buscar Crianças/Necessidades
+e UC-08 Realizar Doação (com o comprovante do UC-09), além do cadastro e da aprovação de
 escolinhas (UC-02 e UC-11) como apoio.
 
 ### Estrutura de pastas
@@ -71,7 +71,7 @@ src/
 ├── api/        app.js: rotas Express e tradução de erros em códigos HTTP
 ├── services/   BuscaService (UC-06) e DoacaoService (UC-08)
 ├── domain/     Necessidade, Escolinha, Crianca, Doacao e validações
-├── infra/      repositório em memória, gateway de pagamento e notificador simulados
+├── infra/      repositórios em memória e em PostgreSQL (infra/postgres), gateway de pagamento e notificador simulados
 └── server.js   sobe a API
 tests/          testes Jest de cada classe, dos serviços e da API (supertest)
 docs/sprint3/   casos de uso, Kanban e daily da sprint
@@ -103,7 +103,6 @@ As respostas nunca trazem nome civil, data de nascimento ou endereço da crianç
 
 - Autenticação e papéis de usuário (UC-01), ainda planejados: por enquanto as rotas são abertas.
 - Gateway de pagamento e serviço de e-mail reais (hoje são simulados).
-- Persistência em PostgreSQL: hoje os dados ficam em memória e somem ao reiniciar. A troca está em andamento na branch `feat/banco-neon` (ver [Banco de dados](#banco-de-dados)).
 - Gestão de usuários e moderação (UC-12, UC-13).
 
 ### Documentação da sprint
@@ -114,10 +113,10 @@ As respostas nunca trazem nome civil, data de nascimento ou endereço da crianç
 
 ## TG3: implementação da aplicação (MVP)
 
-**Aplicação no ar:** `https://doagol.onrender.com`. O plano Free do Render dorme após 15 minutos sem acesso, e a primeira abertura depois disso demora para carregar.
+Aplicação no ar: `https://doagol.onrender.com`. O plano Free do Render dorme após 15 minutos sem acesso, e a primeira abertura depois disso demora para carregar.
 
-O MVP junta o back-end da Sprint 3 a um front-end em **React**, servido pela própria API e hospedado no
-**Render**. Os dados de exemplo (escolinhas, crianças e pedidos fictícios) são carregados ao subir o servidor,
+O MVP junta o back-end da Sprint 3 a um front-end em React, servido pela própria API e hospedado no
+Render. Os dados de exemplo (escolinhas, crianças e pedidos fictícios) são carregados ao subir o servidor,
 para a demonstração nunca começar vazia. A variável `DADOS_EXEMPLO=false` desliga esse carregamento.
 
 ### Telas
@@ -132,14 +131,14 @@ para a demonstração nunca começar vazia. A variável `DADOS_EXEMPLO=false` de
 
 Na busca, a página traz ainda:
 
-- **Hero animado:** o gramado 3D desce com a câmera, o giz risca o meio de campo, a bola rola até a marca central e o título entra palavra por palavra (`frontend/src/componentes/Hero.jsx`).
-- **O app por dentro:** uma janela do app inclinada que endireita com a rolagem, com o total contando e dois balões (`frontend/src/componentes/Produto.jsx`, `TelaProduto`).
-- **Cartões:** cada pedido mostra a barra, o valor arrecadado e a porcentagem, que contam até o valor real. Pedidos acima de 70% ganham o selo "Quase lá" (`frontend/src/componentes/Figurinha.jsx`).
-- **Como doar:** três passos com uma tela presa ao lado do texto, que troca entre busca, perfil e comprovante conforme a rolagem. Vale em telas de 861 px ou mais (`Tour` em `frontend/src/componentes/Produto.jsx`).
-- **Seletor próprio:** estado e tipo de pedido usam um seletor do DoaGol com campo de busca, no lugar do `<select>` nativo. O campo de cidade mostra sugestões do IBGE (`frontend/src/componentes/Seletor.jsx`).
-- **Botão Animações:** liga e desliga o movimento, grava a escolha no navegador e recarrega a página para reiniciar as animações. Sem escolha salva, vale a preferência de movimento reduzido do sistema (`frontend/src/main.jsx`, `frontend/src/movimento.js`).
+- Hero animado: o gramado 3D desce com a câmera, o giz risca o meio de campo, a bola rola até a marca central e o título entra palavra por palavra (`frontend/src/componentes/Hero.jsx`).
+- O app por dentro: uma janela do app inclinada que endireita com a rolagem, com o total contando e dois balões (`frontend/src/componentes/Produto.jsx`, `TelaProduto`).
+- Cartões: cada pedido mostra a barra, o valor arrecadado e a porcentagem, que contam até o valor real. Pedidos acima de 70% ganham o selo "Quase lá" (`frontend/src/componentes/Figurinha.jsx`).
+- Como doar: três passos com uma tela presa ao lado do texto, que troca entre busca, perfil e comprovante conforme a rolagem. Vale em telas de 861 px ou mais (`Tour` em `frontend/src/componentes/Produto.jsx`).
+- Seletor próprio: estado e tipo de pedido usam um seletor do DoaGol com campo de busca, no lugar do `<select>` nativo. O campo de cidade mostra sugestões do IBGE (`frontend/src/componentes/Seletor.jsx`).
+- Botão Animações: liga e desliga o movimento, grava a escolha no navegador e recarrega a página para reiniciar as animações. Sem escolha salva, vale a preferência de movimento reduzido do sistema (`frontend/src/main.jsx`, `frontend/src/movimento.js`).
 
-**Stack do front:** React 19, compilado com esbuild; GSAP com ScrollTrigger para as animações e Lenis para a rolagem suave (`frontend/package.json`).
+Stack do front: React 19, compilado com esbuild; GSAP com ScrollTrigger para as animações e Lenis para a rolagem suave (`frontend/package.json`).
 
 ### Consumo de APIs
 
@@ -153,9 +152,12 @@ As APIs externas são opcionais: se não responderem, os campos continuam funcio
 
 ### Banco de dados
 
-- O PostgreSQL fica no **Neon**, na região AWS us-east-1.
+- O PostgreSQL fica no Neon, na região AWS us-east-1.
 - A connection string vai na variável `DATABASE_URL`: no Environment do serviço `doagol` no Render e num `.env.local` na máquina local. O `.gitignore` ignora `.env.*`, então o arquivo local não entra no repositório.
-- **Em andamento na branch `feat/banco-neon`:** a troca do repositório em memória pelo PostgreSQL. Enquanto essa branch não entrar na `main`, a API guarda os dados em memória e não lê `DATABASE_URL`.
+- Em produção: com `DATABASE_URL` definida, o `src/server.js` conecta ao PostgreSQL, aplica no início as migrations de `db/migrations/` ainda não registradas e usa os repositórios de `src/infra/postgres/`. A doação grava o valor e a necessidade numa transação, com `SELECT ... FOR UPDATE` na necessidade.
+- Dados de exemplo: são carregados só se o banco ainda não tiver nenhuma escolinha; um banco com dados nunca é alterado.
+- Sem `DATABASE_URL`: a API usa os repositórios em memória, e os dados somem ao reiniciar.
+- Rodar localmente com o banco: crie um `.env.local` com `DATABASE_URL` e use `npm run dev:banco`.
 
 ### Estrutura
 
@@ -193,7 +195,7 @@ push na main ──> GitHub Actions (testes + cobertura) ──✓──> Render
 ```
 
 No plano gratuito o serviço dorme após 15 minutos sem acesso e leva até 1 minuto para acordar; como os
-dados ficam em memória, eles voltam aos exemplos a cada reinício.
+dados ficam no PostgreSQL do Neon, eles sobrevivem a reinícios.
 
 ### Documentação do TG3
 
@@ -204,7 +206,7 @@ dados ficam em memória, eles voltam aos exemplos a cada reinício.
 
 O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda no GitHub Actions a cada
 `push` ou pull request nas branches `main` e `dev`, e também pode ser disparado manualmente na aba
-**Actions**.
+Actions.
 
 ```
 push/PR ──> GitHub Actions: Build e testes (Node 20 e 22) ──┬──> Entrega: pacote versionado (Release)
@@ -224,9 +226,9 @@ push/PR ──> GitHub Actions: Build e testes (Node 20 e 22) ──┬──> E
 
 ### Entrega e implantação contínuas (só na `main`, depois dos testes passarem)
 
-- **Entrega:** gera o pacote `doagol-<versão>.tgz` com `npm pack` e publica em
+- Entrega: gera o pacote `doagol-<versão>.tgz` com `npm pack` e publica em
   [Releases](https://github.com/Grupo-carro-chefe/Grupo-ARC/releases), com uma versão nova a cada execução.
-- **Implantação:** publica o relatório de cobertura em
+- Implantação: publica o relatório de cobertura em
   [grupo-carro-chefe.github.io/Grupo-ARC](https://grupo-carro-chefe.github.io/Grupo-ARC/).
 
 ### Fluxo de branches
@@ -252,13 +254,13 @@ A configuração está versionada em [`infra/`](infra/), sem nenhuma senha ou ch
 
 ### Como recriar
 
-1. No AWS Academy, abra o Learner Lab, clique em **Start Lab** e espere a bolinha ficar verde.
+1. No AWS Academy, abra o Learner Lab, clique em Start Lab e espere a bolinha ficar verde.
 2. No terminal do lab, rode `git clone https://github.com/Grupo-carro-chefe/Grupo-ARC.git` e depois
    `bash Grupo-ARC/infra/aws/criar-jenkins-ec2.sh`. O script mostra o IP público.
 3. Depois de 3 a 5 minutos, abra `http://<IP>:8080`, use a senha inicial (o script mostra o comando que a exibe),
    instale os plugins sugeridos e crie o usuário administrador.
 4. No WSL ou no Linux, rode `bash infra/jenkins/importar-job.sh http://<IP>:8080`.
-5. No GitHub, em **Settings > Webhooks**, adicione `http://<IP>:8080/github-webhook/`
+5. No GitHub, em Settings > Webhooks, adicione `http://<IP>:8080/github-webhook/`
    (content type `application/json`, só o evento push).
 
 O IP público muda sempre que a instância é parada ou o lab reinicia. Nesse caso, atualize o webhook com o IP novo.
