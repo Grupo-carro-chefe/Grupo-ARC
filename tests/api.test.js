@@ -161,6 +161,22 @@ describe('API REST', () => {
       expect(res.body.erro).toBe('A escolinha precisa ter o cadastro aprovado para cadastrar crianças.');
     });
 
+    test('CEP inválido no cadastro responde 400 e CEP vazio é aceito (201)', async () => {
+      await request(app).post(`/escolinhas/${escolinhaId}/aprovar`);
+      const base = dadosCrianca();
+      const enviar = (cep) => request(app).post(`/escolinhas/${escolinhaId}/criancas`)
+        .send({ ...base, endereco: { ...base.endereco, cep } });
+
+      const invalido = await enviar('abc');
+      const numerico = await enviar(1310100);
+      const vazio = await enviar('');
+
+      expect(invalido.status).toBe(400);
+      expect(invalido.body).toEqual({ erro: 'CEP inválido: informe 8 dígitos.' });
+      expect(numerico.status).toBe(400);
+      expect(vazio.status).toBe(201);
+    });
+
     test('escolinha aprovada cadastra (201) e a resposta é o perfil público, sem dados sensíveis', async () => {
       await request(app).post(`/escolinhas/${escolinhaId}/aprovar`);
       const res = await request(app).post(`/escolinhas/${escolinhaId}/criancas`).send(dadosCrianca());
