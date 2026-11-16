@@ -136,7 +136,7 @@ Na busca, a página traz ainda:
 - Cartões: cada pedido mostra a barra, o valor arrecadado e a porcentagem, que contam até o valor real. Pedidos acima de 70% ganham o selo "Quase lá" (`frontend/src/componentes/Figurinha.jsx`).
 - Como doar: três passos com uma tela presa ao lado do texto, que troca entre busca, perfil e comprovante conforme a rolagem. Vale em telas de 861 px ou mais (`Tour` em `frontend/src/componentes/Produto.jsx`).
 - Seletor próprio: estado e tipo de pedido usam um seletor do DoaGol com campo de busca, no lugar do `<select>` nativo. O campo de cidade mostra sugestões do IBGE (`frontend/src/componentes/Seletor.jsx`).
-- Botão Animações: liga e desliga o movimento, grava a escolha no navegador e recarrega a página para reiniciar as animações. Sem escolha salva, vale a preferência de movimento reduzido do sistema (`frontend/src/main.jsx`, `frontend/src/movimento.js`).
+- Animações: ficam sempre ligadas, mesmo quando o sistema pede movimento reduzido (`frontend/src/movimento.js`).
 
 Stack do front: React 19, compilado com esbuild; GSAP com ScrollTrigger para as animações e Lenis para a rolagem suave (`frontend/package.json`).
 

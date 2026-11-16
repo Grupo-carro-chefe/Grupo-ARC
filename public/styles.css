@@ -47,10 +47,6 @@ main { min-height: 70vh; flex: 1 0 auto; }
 .marca { display: flex; align-items: center; gap: .5rem; color: var(--cal); text-decoration: none; font-weight: 700; font-size: 1.25rem; }
 .marca__icone { width: 28px; height: 28px; color: var(--amarelo); }
 .menu { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem; }
-.menu__animacoes { font: inherit; font-size: .8rem; font-weight: 500; color: var(--cal); background: transparent; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: .3rem .7rem; margin-left: .35rem; cursor: pointer; }
-.menu__animacoes:hover { background: rgba(255,255,255,.1); }
-.menu__animacoes[aria-pressed="true"] { border-color: var(--amarelo); }
-.menu__animacoes:focus-visible { outline: 2px solid var(--amarelo); outline-offset: 2px; }
 .menu a { color: var(--cal); text-decoration: none; padding: .4rem .8rem; border-radius: 999px; font-weight: 500; font-size: .95rem; }
 .menu a:hover { background: rgba(255,255,255,.1); }
 .menu a[aria-current="page"] { background: var(--cal); color: var(--gramado-escuro); }
@@ -514,8 +510,3 @@ input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px rgba(179,38,30,.18); }
   .linha .campo--largo { grid-column: auto; }
   .passo { padding-left: 1.25rem; padding-top: 3.6rem; }
 }
-/* Sistema pede menos movimento, a menos que o usuário tenha ligado as animações no botão do topo */
-@media (prefers-reduced-motion: reduce) {
-  html:not(.animacoes-ligadas) * { transition: none !important; animation: none !important; }
-}
-html.animacoes-desligadas * { transition: none !important; animation: none !important; }
