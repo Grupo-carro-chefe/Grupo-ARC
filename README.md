@@ -11,6 +11,112 @@ Laboratório de Engenharia de Software, Universidade Presbiteriana Mackenzie.
 | Rodrigo Lucas Mascarenhas Leite Oliveira | 10427925 |
 | Cristian de Souza | 10436050 |
 
+## Sobre o projeto
+
+Escolinhas de futebol social atendem crianças que muitas vezes não têm chuteira, uniforme ou
+dinheiro para o transporte até o treino. O DoaGol liga essas escolinhas a doadores: a escolinha
+cadastra as crianças e os pedidos de cada uma (por exemplo, "Chuteira de futsal nº 33", meta de
+R$ 180,00), e o doador busca por cidade, estado ou tipo de pedido, vê o perfil público da criança
+e doa qualquer valor até completar a meta, recebendo um comprovante na hora. Nome civil, data de
+nascimento e endereço da criança nunca aparecem para o doador.
+
+- Aplicação no ar: https://doagol.onrender.com
+- Relatório de cobertura dos testes: https://grupo-carro-chefe.github.io/Grupo-ARC/
+- Esteira de CI/CD: https://github.com/Grupo-carro-chefe/Grupo-ARC/actions
+
+## Documentação
+
+| Documento | Conteúdo |
+|---|---|
+| [`docs/documentacao/DoaGol-Documentacao.docx`](docs/documentacao/DoaGol-Documentacao.docx) | Documentação completa: demanda, requisitos, wireframes, modelagem, arquitetura, desenvolvimento, testes e resultados |
+| [`docs/testes/casos-de-teste.md`](docs/testes/casos-de-teste.md) | Plano de testes, casos de teste formais e lista completa dos testes automatizados |
+| [`docs/testes/Telas-Testes-DoaGol.docx`](docs/testes/Telas-Testes-DoaGol.docx) | Prints das execuções dos testes (local e na esteira) |
+| [`docs/sprint3/casos-de-uso.md`](docs/sprint3/casos-de-uso.md) | Rastreabilidade entre casos de uso, código, testes e rotas |
+| [`docs/tg3/Telas-DoaGol.docx`](docs/tg3/Telas-DoaGol.docx) | Prints das telas da aplicação |
+| [`docs/tg3/deploy-render.md`](docs/tg3/deploy-render.md) | Passo a passo da hospedagem no Render |
+
+## Manual de instalação
+
+### Pré-requisitos
+
+- Node.js 20 ou mais recente (testado em 20 e 22) e npm.
+- Git.
+- Opcional: PostgreSQL 16 ou 17, para guardar os dados entre reinícios e rodar os testes de banco.
+
+### Passo a passo
+
+```bash
+git clone https://github.com/Grupo-carro-chefe/Grupo-ARC.git
+cd Grupo-ARC
+npm install
+npm start                 # API + front-end em http://localhost:3000
+```
+
+Sem banco configurado, a aplicação usa armazenamento em memória e já sobe com escolinhas, crianças e
+pedidos de exemplo. Os dados somem quando o servidor reinicia.
+
+### Variáveis de ambiente
+
+| Variável | Para quê | Padrão |
+|---|---|---|
+| `PORT` | Porta do servidor | `3000` |
+| `DATABASE_URL` | Connection string do PostgreSQL. Com ela, o servidor aplica as migrations de `db/migrations/` e grava no banco | sem banco (memória) |
+| `DADOS_EXEMPLO` | `false` desliga a carga dos dados de exemplo | ligado |
+| `DATABASE_URL_TESTE` | Banco usado pelos testes de PostgreSQL | testes de banco ignorados |
+
+Para rodar com banco, crie um arquivo `.env.local` com `DATABASE_URL=postgresql://...` e use `npm run dev:banco`.
+
+## Manual de utilização
+
+### Para quem quer doar
+
+1. Abra a aplicação (local em http://localhost:3000 ou publicada em https://doagol.onrender.com).
+2. Na busca, filtre por estado, cidade (com sugestões do IBGE) e tipo de pedido.
+3. Clique no cartão de uma criança para ver o perfil: apelido, idade, cidade, escolinha e o progresso de cada pedido.
+4. Clique em "Doar para este pedido", escolha o valor e a forma de pagamento (Pix, cartão ou boleto) e, se quiser, marque a doação como anônima.
+5. Confirme. O comprovante aparece com código, valor, forma de pagamento, data e transação. O pagamento é simulado: não há cobrança real.
+
+### Para a escolinha
+
+1. Clique em "Sou escolinha" no menu do topo e cadastre a escolinha (nome, cidade e UF). Ela nasce pendente.
+2. Um administrador aprova o cadastro (na demonstração, pelo botão "Aprovar cadastro (administrador)").
+3. Cadastre as crianças. O CEP preenche o endereço pelo ViaCEP, e esses dados ficam privados.
+4. Cadastre os pedidos de cada criança com descrição e valor. Eles aparecem na busca na hora.
+
+### Pela API
+
+As rotas estão na tabela da seção [Como rodar a API](#como-rodar-a-api). Exemplos prontos para o
+VS Code (extensão REST Client) estão em [`docs/sprint3/demo-api.http`](docs/sprint3/demo-api.http).
+
+## Entrega 4: testes
+
+| Item | Onde |
+|---|---|
+| Código dos testes | pasta [`tests/`](tests/): 15 arquivos, 315 casos (Jest e supertest) |
+| Casos de teste documentados | [`docs/testes/casos-de-teste.md`](docs/testes/casos-de-teste.md) e Capítulo 9 da documentação |
+| Prints das execuções | [`docs/testes/Telas-Testes-DoaGol.docx`](docs/testes/Telas-Testes-DoaGol.docx) |
+| Vídeo da esteira rodando os testes (53 s, sem áudio) | [`docs/testes/DoaGol-esteira-testes.mp4`](docs/testes/DoaGol-esteira-testes.mp4) |
+| Esteira que roda os testes | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (GitHub Actions) e [`infra/jenkins/`](infra/jenkins/) (Jenkins na AWS) |
+
+Os testes cobrem quatro níveis: unidade do domínio (regras de `Necessidade`, `Escolinha`, `Crianca` e
+`Doacao`), unidade dos serviços (busca e doação com gateway e notificador simulados), integração da API
+REST com supertest e integração com um PostgreSQL de verdade (migrations, transação da doação e 20 doações
+simultâneas disputando a mesma meta).
+
+```bash
+npm test                                  # roda todos os testes
+npm run test:coverage                     # com relatório de cobertura em coverage/
+npx jest tests/api.test.js --verbose      # um arquivo, mostrando cada caso
+
+# testes de banco: precisam de um PostgreSQL
+export DATABASE_URL_TESTE=postgresql://doagol:doagol_teste@localhost:5432/doagol_teste
+npm run test:coverage
+```
+
+Execução de 23/11/2026, com PostgreSQL: 15 suítes, 315 casos, todos passando, e cobertura de 100% de
+linhas, 100% de funções, 100% de instruções e 96,29% de ramos. A esteira exige pelo menos 95% de linhas e
+85% de ramos; abaixo disso o job falha e nada é entregue.
+
 ## Entrega 2: classe implementada e testes
 
 Para a camada de aplicação, adotamos Node.js, mantendo JavaScript de ponta a ponta com o
